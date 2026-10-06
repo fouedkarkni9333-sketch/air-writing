@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تطبيق الكتابة في الهواء - Air Writing</title>
+    <title>تطبيق الكتابة والتحكم المتقدم - Air Writing</title>
     <!-- مكتبات MediaPipe للبراوزر -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
@@ -17,10 +17,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             min-height: 100vh;
+            padding: 10px;
         }
-        h2 { margin: 10px; font-size: 18px; }
+        h2 { margin: 8px; font-size: 16px; color: #00FF00; }
         .video-container {
             position: relative;
             width: 100%;
@@ -28,6 +29,7 @@
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            background: #000;
         }
         video, canvas {
             width: 100%;
@@ -40,47 +42,135 @@
             top: 0;
             left: 0;
         }
-        .clear-btn {
-            margin-top: 15px;
-            padding: 10px 20px;
-            background-color: #ff4757;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            transition: background 0.3s;
+        .controls {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            max-width: 400px;
         }
-        .clear-btn:hover {
-            background-color: #ff6b81;
+        button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: opacity 0.2s;
+        }
+        button:active { opacity: 0.7; }
+        .btn-clear { background-color: #ff4757; color: white; }
+        .btn-save { background-color: #2ed573; color: white; }
+        .btn-eraser { background-color: #ffa502; color: white; }
+        .color-picker {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            background: #1e1e1e;
+            padding: 5px 10px;
+            border-radius: 6px;
+        }
+        .color-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .color-dot.active { border-color: white; }
+        .status-bar {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #00ffcc;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-    <h2>تتبع اليد والكتابة في الهواء عبر المتصفح</h2>
+    <h2>تطبيق الكتابة في الهواء والتحكم الذكي</h2>
     <div class="video-container">
         <video id="webcam" autoplay playsinline></video>
         <canvas id="output_canvas"></canvas>
     </div>
-    <button class="clear-btn" id="clearBtn">مسح الشاشة</button>
+
+    <div class="status-bar" id="statusBar">الوضع: رسم (ارفع إصبعاً واحداً)</div>
+
+    <div class="controls">
+        <div class="color-picker">
+            <div class="color-dot active" style="background: #00FF00;" onclick="setColor('#00FF00', this)" title="أخضر"></div>
+            <div class="color-dot" style="background: #ff4757;" onclick="setColor('#ff4757', this)" title="أحمر"></div>
+            <div class="color-dot" style="background: #2e86de;" onclick="setColor('#2e86de', this)" title="أزرق"></div>
+            <div class="color-dot" style="background: #ffffff;" onclick="setColor('#ffffff', this)" title="أبيض"></div>
+        </div>
+        <button class="btn-eraser" id="eraserBtn" onclick="toggleEraser()">ممحاة</button>
+        <button class="btn-clear" id="clearBtn">مسح الشاشة</button>
+        <button class="btn-save" id="saveBtn">حفظ الرسمة</button>
+    </div>
 
     <script>
         const videoElement = document.getElementById('webcam');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
         const clearBtn = document.getElementById('clearBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const eraserBtn = document.getElementById('eraserBtn');
+        const statusBar = document.getElementById('statusBar');
 
-        // مصفوفة لحفظ مسار الخطوط المرسومة (تحتوي على خطوط وكل خط عبارة عن مجموعة نقاط)
         let lines = [];
         let currentLine = [];
+        let currentColor = '#00FF00';
+        let isEraser = false;
 
-        // زر المسح لحذف جميع الخطوط المرسومة
+        function setColor(color, element) {
+            isEraser = false;
+            currentColor = color;
+            eraserBtn.style.opacity = '1';
+            document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+            element.classList.add('active');
+            statusBar.innerText = "الوضع: رسم (ارفع إصبعاً واحداً)";
+        }
+
+        function toggleEraser() {
+            isEraser = !isEraser;
+            if (isEraser) {
+                eraserBtn.style.opacity = '0.5';
+                statusBar.innerText = "الوضع: ممحاة نشطة (اقترب من الخطوط لمسحها)";
+            } else {
+                eraserBtn.style.opacity = '1';
+                statusBar.innerText = "الوضع: رسم (ارفع إصبعاً واحداً)";
+            }
+        }
+
         clearBtn.addEventListener('click', () => {
             lines = [];
             currentLine = [];
         });
+
+        // زر حفظ الرسمة كصورة PNG
+        saveBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'air-drawing.png';
+            link.href = canvasElement.toDataURL('image/png');
+            link.click();
+        });
+
+        // دالة لحساب عدد الأصابع المرفوعة بدقة
+        function countRaisedFingers(landmarks) {
+            let raised = 0;
+            // أطراف ومفاصل الأصابع: السبابة (8,6)، الوسطى (12,10)، البنصر (16,14)، الخنصر (20,18)
+            const tips = [8, 12, 16, 20];
+            const pips = [6, 10, 14, 18];
+
+            for (let i = 0; i < tips.length; i++) {
+                if (landmarks[tips[i]].y < landmarks[pips[i]].y) {
+                    raised++;
+                }
+            }
+            return raised;
+        }
 
         function onResults(results) {
             canvasElement.width = videoElement.videoWidth;
@@ -88,43 +178,74 @@
 
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            
-            // رسم صورة الكاميرا في الخلفية
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
             let fingerDetected = false;
 
-            if (results.multiHandLandmarks) {
-                for (const landmarks of results.multiHandLandmarks) {
-                    // إحداثيات الإصبع السبابة (Landmark 8)
-                    const indexFinger = landmarks[8];
-                    const x = indexFinger.x * canvasElement.width;
-                    const y = indexFinger.y * canvasElement.height;
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+                const indexFinger = landmarks[8]; // إحداثيات السبابة
+                const x = indexFinger.x * canvasElement.width;
+                const y = indexFinger.y * canvasElement.height;
 
-                    fingerDetected = true;
-                    currentLine.push({x: x, y: y});
+                fingerDetected = true;
+                const raisedCount = countRaisedFingers(landmarks);
 
-                    // رسم دائرة خضراء مكان طرف الإصبع
+                // إذا رفعت إصبعين (السبابة والوسطى معاً) -> وضع التمرير التلقائي (Scrolling)
+                if (raisedCount >= 2) {
+                    statusBar.innerText = "وضع التمرير التلقائي (حرك يدك للأعلى/الأسفل)";
+                    if (currentLine.length > 0) {
+                        lines.push(currentLine);
+                        currentLine = [];
+                    }
+                    // تحريك الشاشة بناءً على موقع اليد عمودياً
+                    let scrollSpeed = (y - (canvasElement.height / 2)) * 0.05;
+                    window.scrollBy({ top: scrollSpeed, behavior: 'smooth' });
+
+                    // رسم دائرة زرقاء دالة على وضع التمرير
                     canvasCtx.beginPath();
-                    canvasCtx.arc(x, y, 8, 0, 2 * Math.PI);
-                    canvasCtx.fillStyle = '#00FF00';
+                    canvasCtx.arc(x, y, 14, 0, 2 * Math.PI);
+                    canvasCtx.fillStyle = '#2e86de';
                     canvasCtx.fill();
+                } 
+                // إذا رفعت إصبعاً واحداً -> وضع الرسم أو الممحاة
+                else {
+                    if (isEraser) {
+                        statusBar.innerText = "الوضع: ممحاة نشطة";
+                        // مسح الخطوط القريبة من موضع الإصبع
+                        lines = lines.filter(line => {
+                            return !line.some(p => Math.hypot(p.x - x, p.y - y) < 25);
+                        });
+                        // رسم دائرة للممحاة
+                        canvasCtx.beginPath();
+                        canvasCtx.arc(x, y, 20, 0, 2 * Math.PI);
+                        canvasCtx.strokeStyle = '#ffa502';
+                        canvasCtx.lineWidth = 3;
+                        canvasCtx.stroke();
+                    } else {
+                        statusBar.innerText = "الوضع: رسم (إصبع واحد)";
+                        currentLine.push({x: x, y: y, color: currentColor});
+
+                        // رسم دائرة بلون الرسم المختار عند طرف الإصبع
+                        canvasCtx.beginPath();
+                        canvasCtx.arc(x, y, 8, 0, 2 * Math.PI);
+                        canvasCtx.fillStyle = currentColor;
+                        canvasCtx.fill();
+                    }
                 }
             }
 
-            // إذا لم يتم رصد الإصبع، نقوم بإنهاء الخط الحالي وبدء خط جديد عند الرفع القادم
             if (!fingerDetected && currentLine.length > 0) {
                 lines.push(currentLine);
                 currentLine = [];
             }
 
-            // دمج الخط الحالي مع الخطوط السابقة لكي يتم رسمها مستمرة
+            // دمج ورسم الخطوط على الشاشة
             const allLines = [...lines];
             if (currentLine.length > 0) {
                 allLines.push(currentLine);
             }
 
-            // رسم جميع الخطوط على الـ Canvas
             allLines.forEach(line => {
                 if (line.length > 1) {
                     canvasCtx.beginPath();
@@ -132,7 +253,7 @@
                     for (let i = 1; i < line.length; i++) {
                         canvasCtx.lineTo(line[i].x, line[i].y);
                     }
-                    canvasCtx.strokeStyle = '#00FF00';
+                    canvasCtx.strokeStyle = line[0].color || '#00FF00';
                     canvasCtx.lineWidth = 5;
                     canvasCtx.lineCap = 'round';
                     canvasCtx.lineJoin = 'round';
