@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تطبيق الكتابة والتحكم المتقدم - Air Writing</title>
+    <title>Air Maestro - المايسترو الساخر</title>
     <!-- مكتبات MediaPipe للبراوزر -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
         body {
             margin: 0;
-            background-color: #121212;
+            background-color: #0b0b0f;
             color: white;
             font-family: Arial, sans-serif;
             text-align: center;
@@ -21,21 +21,22 @@
             min-height: 100vh;
             padding: 10px;
         }
-        h2 { margin: 8px; font-size: 16px; color: #00FF00; }
+        h2 { margin: 8px; font-size: 18px; color: #ff007f; text-shadow: 0 0 10px rgba(255,0,127,0.7); }
         .video-container {
             position: relative;
             width: 100%;
             max-width: 400px;
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 0 25px rgba(255, 0, 127, 0.4);
             background: #000;
+            border: 2px solid #ff007f;
         }
         video, canvas {
             width: 100%;
             height: auto;
             display: block;
-            transform: scaleX(-1); /* عكس الصورة لتكون مرآة */
+            transform: scaleX(-1); /* مرآة */
         }
         canvas {
             position: absolute;
@@ -43,43 +44,25 @@
             left: 0;
         }
         .controls {
-            margin-top: 10px;
+            margin-top: 15px;
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+            gap: 10px;
             justify-content: center;
             max-width: 400px;
         }
         button {
-            padding: 8px 12px;
+            padding: 10px 16px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 14px;
             cursor: pointer;
             font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            transition: opacity 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
         }
-        button:active { opacity: 0.7; }
-        .btn-clear { background-color: #ff4757; color: white; }
-        .btn-save { background-color: #2ed573; color: white; }
-        .btn-eraser { background-color: #ffa502; color: white; }
-        .color-picker {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-            background: #1e1e1e;
-            padding: 5px 10px;
-            border-radius: 6px;
-        }
-        .color-dot {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 2px solid transparent;
-        }
-        .color-dot.active { border-color: white; }
+        button:active { transform: scale(0.95); }
+        .btn-party { background-color: #ff007f; color: white; }
+        .btn-reset { background-color: #3f3f46; color: white; }
         .status-bar {
             margin-top: 8px;
             font-size: 14px;
@@ -90,86 +73,57 @@
 </head>
 <body>
 
-    <h2>تطبيق الكتابة في الهواء والتحكم الذكي</h2>
+    <h2>🎵 Air Maestro - عُزف في الهواء</h2>
     <div class="video-container">
         <video id="webcam" autoplay playsinline></video>
         <canvas id="output_canvas"></canvas>
     </div>
 
-    <div class="status-bar" id="statusBar">الوضع: رسم (ارفع إصبعاً واحداً)</div>
+    <div class="status-bar" id="statusBar">حرك يدك لتوليد الألحان والشرار الضوئي</div>
 
     <div class="controls">
-        <div class="color-picker">
-            <div class="color-dot active" style="background: #00FF00;" onclick="setColor('#00FF00', this)" title="أخضر"></div>
-            <div class="color-dot" style="background: #ff4757;" onclick="setColor('#ff4757', this)" title="أحمر"></div>
-            <div class="color-dot" style="background: #2e86de;" onclick="setColor('#2e86de', this)" title="أزرق"></div>
-            <div class="color-dot" style="background: #ffffff;" onclick="setColor('#ffffff', this)" title="أبيض"></div>
-        </div>
-        <button class="btn-eraser" id="eraserBtn" onclick="toggleEraser()">ممحاة</button>
-        <button class="btn-clear" id="clearBtn">مسح الشاشة</button>
-        <button class="btn-save" id="saveBtn">حفظ الرسمة</button>
+        <button class="btn-party" onclick="triggerPartyMode()">وضع الحفل الخيالي 🎉</button>
+        <button class="btn-reset" onclick="resetCanvas()">مسح الشاشة</button>
     </div>
 
     <script>
         const videoElement = document.getElementById('webcam');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
-        const clearBtn = document.getElementById('clearBtn');
-        const saveBtn = document.getElementById('saveBtn');
-        const eraserBtn = document.getElementById('eraserBtn');
         const statusBar = document.getElementById('statusBar');
 
-        let lines = [];
-        let currentLine = [];
-        let currentColor = '#00FF00';
-        let isEraser = false;
+        let particles = [];
+        let isPartyMode = false;
 
-        function setColor(color, element) {
-            isEraser = false;
-            currentColor = color;
-            eraserBtn.style.opacity = '1';
-            document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-            element.classList.add('active');
-            statusBar.innerText = "الوضع: رسم (ارفع إصبعاً واحداً)";
+        // نظام إصدار أصوات موسيقية خفيفة عبر Web Audio API
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playNote(freq) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
         }
 
-        function toggleEraser() {
-            isEraser = !isEraser;
-            if (isEraser) {
-                eraserBtn.style.opacity = '0.5';
-                statusBar.innerText = "الوضع: ممحاة نشطة (اقترب من الخطوط لمسحها)";
-            } else {
-                eraserBtn.style.opacity = '1';
-                statusBar.innerText = "الوضع: رسم (ارفع إصبعاً واحداً)";
-            }
+        function triggerPartyMode() {
+            isPartyMode = !isPartyMode;
+            statusBar.innerText = isPartyMode ? "🔥 وضع الحفل الخيالي مفعل!" : "حرك يدك لتوليد الألحان والشرار الضوئي";
         }
 
-        clearBtn.addEventListener('click', () => {
-            lines = [];
-            currentLine = [];
-        });
-
-        // زر حفظ الرسمة كصورة PNG
-        saveBtn.addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.download = 'air-drawing.png';
-            link.href = canvasElement.toDataURL('image/png');
-            link.click();
-        });
-
-        // دالة لحساب عدد الأصابع المرفوعة بدقة
-        function countRaisedFingers(landmarks) {
-            let raised = 0;
-            // أطراف ومفاصل الأصابع: السبابة (8,6)، الوسطى (12,10)، البنصر (16,14)، الخنصر (20,18)
-            const tips = [8, 12, 16, 20];
-            const pips = [6, 10, 14, 18];
-
-            for (let i = 0; i < tips.length; i++) {
-                if (landmarks[tips[i]].y < landmarks[pips[i]].y) {
-                    raised++;
-                }
-            }
-            return raised;
+        function resetCanvas() {
+            particles = [];
         }
 
         function onResults(results) {
@@ -180,86 +134,60 @@
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-            let fingerDetected = false;
-
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 const landmarks = results.multiHandLandmarks[0];
-                const indexFinger = landmarks[8]; // إحداثيات السبابة
+                const indexFinger = landmarks[8]; // السبابة
                 const x = indexFinger.x * canvasElement.width;
                 const y = indexFinger.y * canvasElement.height;
 
-                fingerDetected = true;
-                const raisedCount = countRaisedFingers(landmarks);
+                // تحديد نغمة موسيقية بناءً على موقع اليد عمودياً (كلما ارتفعت اليد زاد التردد)
+                let freq = 200 + (canvasElement.height - y) * 2;
+                
+                // توليد جزيئات ضوئية متطايرة تتبع الإصبع
+                particles.push({
+                    x: x,
+                    y: y,
+                    radius: Math.random() * 8 + 4,
+                    color: isPartyMode ? `hsl(${Math.random() * 360}, 100%, 50%)` : '#00ffcc',
+                    alpha: 1,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6
+                });
 
-                // إذا رفعت إصبعين (السبابة والوسطى معاً) -> وضع التمرير التلقائي (Scrolling)
-                if (raisedCount >= 2) {
-                    statusBar.innerText = "وضع التمرير التلقائي (حرك يدك للأعلى/الأسفل)";
-                    if (currentLine.length > 0) {
-                        lines.push(currentLine);
-                        currentLine = [];
-                    }
-                    // تحريك الشاشة بناءً على موقع اليد عمودياً
-                    let scrollSpeed = (y - (canvasElement.height / 2)) * 0.05;
-                    window.scrollBy({ top: scrollSpeed, behavior: 'smooth' });
+                // تشغيل نغمة خفيفة كل بضعة إطارات لتجنب الضوضاء
+                if (Math.random() < 0.3) {
+                    playNote(freq);
+                }
 
-                    // رسم دائرة زرقاء دالة على وضع التمرير
+                // رسم دائرة مضيئة عند طرف الإصبع
+                canvasCtx.beginPath();
+                canvasCtx.arc(x, y, 15, 0, 2 * Math.PI);
+                canvasCtx.fillStyle = isPartyMode ? '#ff007f' : '#00ffcc';
+                canvasCtx.shadowBlur = 20;
+                canvasCtx.shadowColor = canvasCtx.fillStyle;
+                canvasCtx.fill();
+                canvasCtx.shadowBlur = 0; // إيقاف التوهج المؤقت
+            }
+
+            // تحديث ورسم الجزيئات المتطايرة
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.03;
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                } else {
+                    canvasCtx.save();
+                    canvasCtx.globalAlpha = p.alpha;
                     canvasCtx.beginPath();
-                    canvasCtx.arc(x, y, 14, 0, 2 * Math.PI);
-                    canvasCtx.fillStyle = '#2e86de';
+                    canvasCtx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+                    canvasCtx.fillStyle = p.color;
                     canvasCtx.fill();
-                } 
-                // إذا رفعت إصبعاً واحداً -> وضع الرسم أو الممحاة
-                else {
-                    if (isEraser) {
-                        statusBar.innerText = "الوضع: ممحاة نشطة";
-                        // مسح الخطوط القريبة من موضع الإصبع
-                        lines = lines.filter(line => {
-                            return !line.some(p => Math.hypot(p.x - x, p.y - y) < 25);
-                        });
-                        // رسم دائرة للممحاة
-                        canvasCtx.beginPath();
-                        canvasCtx.arc(x, y, 20, 0, 2 * Math.PI);
-                        canvasCtx.strokeStyle = '#ffa502';
-                        canvasCtx.lineWidth = 3;
-                        canvasCtx.stroke();
-                    } else {
-                        statusBar.innerText = "الوضع: رسم (إصبع واحد)";
-                        currentLine.push({x: x, y: y, color: currentColor});
-
-                        // رسم دائرة بلون الرسم المختار عند طرف الإصبع
-                        canvasCtx.beginPath();
-                        canvasCtx.arc(x, y, 8, 0, 2 * Math.PI);
-                        canvasCtx.fillStyle = currentColor;
-                        canvasCtx.fill();
-                    }
+                    canvasCtx.restore();
                 }
             }
-
-            if (!fingerDetected && currentLine.length > 0) {
-                lines.push(currentLine);
-                currentLine = [];
-            }
-
-            // دمج ورسم الخطوط على الشاشة
-            const allLines = [...lines];
-            if (currentLine.length > 0) {
-                allLines.push(currentLine);
-            }
-
-            allLines.forEach(line => {
-                if (line.length > 1) {
-                    canvasCtx.beginPath();
-                    canvasCtx.moveTo(line[0].x, line[0].y);
-                    for (let i = 1; i < line.length; i++) {
-                        canvasCtx.lineTo(line[i].x, line[i].y);
-                    }
-                    canvasCtx.strokeStyle = line[0].color || '#00FF00';
-                    canvasCtx.lineWidth = 5;
-                    canvasCtx.lineCap = 'round';
-                    canvasCtx.lineJoin = 'round';
-                    canvasCtx.stroke();
-                }
-            });
 
             canvasCtx.restore();
         }
