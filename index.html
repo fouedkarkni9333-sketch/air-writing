@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Maestro - المايسترو الساخر</title>
-    <!-- مكتبات MediaPipe للبراوزر -->
+    <title>Cosmic Gravity - مجرة الجاذبية الكونية</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
         body {
             margin: 0;
-            background-color: #0b0b0f;
+            background-color: #030308;
             color: white;
             font-family: Arial, sans-serif;
             text-align: center;
@@ -20,71 +19,48 @@
             justify-content: flex-start;
             min-height: 100vh;
             padding: 10px;
+            overflow: hidden;
         }
-        h2 { margin: 8px; font-size: 18px; color: #ff007f; text-shadow: 0 0 10px rgba(255,0,127,0.7); }
+        h2 { margin: 6px; font-size: 17px; color: #00ffcc; text-shadow: 0 0 12px rgba(0,255,204,0.7); }
         .video-container {
             position: relative;
             width: 100%;
             max-width: 400px;
             border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 0 25px rgba(255, 0, 127, 0.4);
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.3);
             background: #000;
-            border: 2px solid #ff007f;
+            border: 2px solid #00ffcc;
         }
         video, canvas {
             width: 100%;
             height: auto;
             display: block;
-            transform: scaleX(-1); /* مرآة */
+            transform: scaleX(-1);
         }
         canvas {
             position: absolute;
             top: 0;
             left: 0;
         }
-        .controls {
-            margin-top: 15px;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            max-width: 400px;
-        }
-        button {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            transition: transform 0.1s;
-        }
-        button:active { transform: scale(0.95); }
-        .btn-party { background-color: #ff007f; color: white; }
-        .btn-reset { background-color: #3f3f46; color: white; }
         .status-bar {
             margin-top: 8px;
-            font-size: 14px;
-            color: #00ffcc;
+            font-size: 13px;
+            color: #ff007f;
             font-weight: bold;
+            text-shadow: 0 0 8px rgba(255,0,127,0.5);
         }
     </style>
 </head>
 <body>
 
-    <h2>🎵 Air Maestro - عُزف في الهواء</h2>
+    <h2>🌌 Cosmic Gravity - مجرة الجاذبية</h2>
     <div class="video-container">
         <video id="webcam" autoplay playsinline></video>
         <canvas id="output_canvas"></canvas>
     </div>
 
-    <div class="status-bar" id="statusBar">حرك يدك لتوليد الألحان والشرار الضوئي</div>
-
-    <div class="controls">
-        <button class="btn-party" onclick="triggerPartyMode()">وضع الحفل الخيالي 🎉</button>
-        <button class="btn-reset" onclick="resetCanvas()">مسح الشاشة</button>
-    </div>
+    <div class="status-bar" id="statusBar">حرك إصبعك لتحريك النجوم | اقبض يدك لعمل انفجار كوني</div>
 
     <script>
         const videoElement = document.getElementById('webcam');
@@ -92,130 +68,54 @@
         const canvasCtx = canvasElement.getContext('2d');
         const statusBar = document.getElementById('statusBar');
 
-        let particles = [];
-        let isPartyMode = false;
+        // إنشاء نظام النجوم الكونية (Particle System)
+        let stars = [];
+        const numStars = 250;
 
-        // نظام إصدار أصوات موسيقية خفيفة عبر Web Audio API
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        function playNote(freq) {
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-            
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.3);
+        for (let i = 0; i < numStars; i++) {
+            stars.push({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: (Math.random() - 0.5) * 1.5,
+                radius: Math.random() * 2.5 + 1,
+                color: `hsl(${Math.random() * 60 + 160}, 100%, 70%)` // درجات الفيروزي والأزرق السماوي
+            });
         }
 
-        function triggerPartyMode() {
-            isPartyMode = !isPartyMode;
-            statusBar.innerText = isPartyMode ? "🔥 وضع الحفل الخيالي مفعل!" : "حرك يدك لتوليد الألحان والشرار الضوئي";
-        }
-
-        function resetCanvas() {
-            particles = [];
-        }
+        let handX = -100;
+        let handY = -100;
+        let isFist = false;
 
         function onResults(results) {
-            canvasElement.width = videoElement.videoWidth;
-            canvasElement.height = videoElement.videoHeight;
+            canvasElement.width = videoElement.videoWidth || 640;
+            canvasElement.height = videoElement.videoHeight || 480;
 
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            // رسم خلفية الكاميرا بشفافية خفيفة لدمجها مع الفضاء
+            canvasCtx.globalAlpha = 0.25;
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.globalAlpha = 1.0;
 
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 const landmarks = results.multiHandLandmarks[0];
                 const indexFinger = landmarks[8]; // السبابة
-                const x = indexFinger.x * canvasElement.width;
-                const y = indexFinger.y * canvasElement.height;
+                const wrist = landmarks[0];
+                const thumbTip = landmarks[4];
 
-                // تحديد نغمة موسيقية بناءً على موقع اليد عمودياً (كلما ارتفعت اليد زاد التردد)
-                let freq = 200 + (canvasElement.height - y) * 2;
-                
-                // توليد جزيئات ضوئية متطايرة تتبع الإصبع
-                particles.push({
-                    x: x,
-                    y: y,
-                    radius: Math.random() * 8 + 4,
-                    color: isPartyMode ? `hsl(${Math.random() * 360}, 100%, 50%)` : '#00ffcc',
-                    alpha: 1,
-                    vx: (Math.random() - 0.5) * 6,
-                    vy: (Math.random() - 0.5) * 6
-                });
+                handX = indexFinger.x * canvasElement.width;
+                handY = indexFinger.y * canvasElement.height;
 
-                // تشغيل نغمة خفيفة كل بضعة إطارات لتجنب الضوضاء
-                if (Math.random() < 0.3) {
-                    playNote(freq);
-                }
+                // التحقق مما إذا كانت اليد مقبوضة (Fist) عبر تقارب الأصابع من المعصم
+                let distToWrist = Math.hypot(indexFinger.x - wrist.x, indexFinger.y - wrist.y);
+                isFist = distToWrist < 0.25;
 
-                // رسم دائرة مضيئة عند طرف الإصبع
-                canvasCtx.beginPath();
-                canvasCtx.arc(x, y, 15, 0, 2 * Math.PI);
-                canvasCtx.fillStyle = isPartyMode ? '#ff007f' : '#00ffcc';
-                canvasCtx.shadowBlur = 20;
-                canvasCtx.shadowColor = canvasCtx.fillStyle;
-                canvasCtx.fill();
-                canvasCtx.shadowBlur = 0; // إيقاف التوهج المؤقت
-            }
-
-            // تحديث ورسم الجزيئات المتطايرة
-            for (let i = particles.length - 1; i >= 0; i--) {
-                let p = particles[i];
-                p.x += p.vx;
-                p.y += p.vy;
-                p.alpha -= 0.03;
-
-                if (p.alpha <= 0) {
-                    particles.splice(i, 1);
+                if (isFist) {
+                    statusBar.innerText = "💥 انفجار كوني نشط! (Supernova)";
                 } else {
-                    canvasCtx.save();
-                    canvasCtx.globalAlpha = p.alpha;
-                    canvasCtx.beginPath();
-                    canvasCtx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
-                    canvasCtx.fillStyle = p.color;
-                    canvasCtx.fill();
-                    canvasCtx.restore();
+                    statusBar.innerText = "✨ إصبعك يتحكم بجاذبية المجرة";
                 }
-            }
 
-            canvasCtx.restore();
-        }
-
-        const hands = new Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-        });
-
-        hands.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.7,
-            minTrackingConfidence: 0.7
-        });
-
-        hands.onResults(onResults);
-
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await hands.send({ image: videoElement });
-            },
-            width: 640,
-            height: 480
-        });
-
-        camera.start().catch(err => {
-            alert("خطأ في تشغيل الكاميرا: " + err);
-        });
-    </script>
-</body>
-</html>
+                // رسم دائرة تو
