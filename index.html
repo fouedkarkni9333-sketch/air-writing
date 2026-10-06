@@ -40,6 +40,21 @@
             top: 0;
             left: 0;
         }
+        .clear-btn {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: background 0.3s;
+        }
+        .clear-btn:hover {
+            background-color: #ff6b81;
+        }
     </style>
 </head>
 <body>
@@ -49,11 +64,23 @@
         <video id="webcam" autoplay playsinline></video>
         <canvas id="output_canvas"></canvas>
     </div>
+    <button class="clear-btn" id="clearBtn">مسح الشاشة</button>
 
     <script>
         const videoElement = document.getElementById('webcam');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
+        const clearBtn = document.getElementById('clearBtn');
+
+        // مصفوفة لحفظ مسار الخطوط المرسومة (تحتوي على خطوط وكل خط عبارة عن مجموعة نقاط)
+        let lines = [];
+        let currentLine = [];
+
+        // زر المسح لحذف جميع الخطوط المرسومة
+        clearBtn.addEventListener('click', () => {
+            lines = [];
+            currentLine = [];
+        });
 
         function onResults(results) {
             canvasElement.width = videoElement.videoWidth;
@@ -61,7 +88,11 @@
 
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            // رسم صورة الكاميرا في الخلفية
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+            let fingerDetected = false;
 
             if (results.multiHandLandmarks) {
                 for (const landmarks of results.multiHandLandmarks) {
@@ -70,13 +101,45 @@
                     const x = indexFinger.x * canvasElement.width;
                     const y = indexFinger.y * canvasElement.height;
 
-                    // رسم دائرة مكان الإصبع
+                    fingerDetected = true;
+                    currentLine.push({x: x, y: y});
+
+                    // رسم دائرة خضراء مكان طرف الإصبع
                     canvasCtx.beginPath();
-                    canvasCtx.arc(x, y, 10, 0, 2 * Math.PI);
+                    canvasCtx.arc(x, y, 8, 0, 2 * Math.PI);
                     canvasCtx.fillStyle = '#00FF00';
                     canvasCtx.fill();
                 }
             }
+
+            // إذا لم يتم رصد الإصبع، نقوم بإنهاء الخط الحالي وبدء خط جديد عند الرفع القادم
+            if (!fingerDetected && currentLine.length > 0) {
+                lines.push(currentLine);
+                currentLine = [];
+            }
+
+            // دمج الخط الحالي مع الخطوط السابقة لكي يتم رسمها مستمرة
+            const allLines = [...lines];
+            if (currentLine.length > 0) {
+                allLines.push(currentLine);
+            }
+
+            // رسم جميع الخطوط على الـ Canvas
+            allLines.forEach(line => {
+                if (line.length > 1) {
+                    canvasCtx.beginPath();
+                    canvasCtx.moveTo(line[0].x, line[0].y);
+                    for (let i = 1; i < line.length; i++) {
+                        canvasCtx.lineTo(line[i].x, line[i].y);
+                    }
+                    canvasCtx.strokeStyle = '#00FF00';
+                    canvasCtx.lineWidth = 5;
+                    canvasCtx.lineCap = 'round';
+                    canvasCtx.lineJoin = 'round';
+                    canvasCtx.stroke();
+                }
+            });
+
             canvasCtx.restore();
         }
 
