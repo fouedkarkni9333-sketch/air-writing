@@ -496,6 +496,8 @@
             
             if (results && results.image) {
                 canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            } else if (videoElement.readyState >= 2) {
+                canvasCtx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
             }
 
             if (combo >= 10) {
@@ -678,12 +680,23 @@
 
         hands.setOptions({
             maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.7,
-            minTrackingConfidence: 0.7
+            modelComplexity: 0,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
         });
 
         hands.onResults(onResults);
+
+        async function sendVideoFrame() {
+            if (isRunning && videoElement.readyState >= 2) {
+                try {
+                    await hands.send({ image: videoElement });
+                } catch (e) {}
+            }
+            if (isRunning) {
+                setTimeout(sendVideoFrame, 35);
+            }
+        }
 
         function startCamera() {
             initAudio();
@@ -691,29 +704,14 @@
 
             if (cameraInstance) return;
 
-            // استخدام دالة بديلة مباشرة لطلب الكاميرا لمنع أي توقف في متصفحات الهواتف
-            navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
+            navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, frameRate: { ideal: 30 } } })
                 .then((stream) => {
                     videoElement.srcObject = stream;
                     videoElement.play();
                     
-                    cameraInstance = new Camera(videoElement, {
-                        onFrame: async () => {
-                            if (videoElement.readyState >= 2) {
-                                await hands.send({ image: videoElement });
-                            }
-                        },
-                        width: 640,
-                        height: 480
-                    });
-
-                    cameraInstance.start().then(() => {
-                        isRunning = true;
-                        statusBar.innerText = t.camSuccess;
-                    }).catch(() => {
-                        isRunning = true;
-                        statusBar.innerText = t.camSuccess;
-                    });
+                    isRunning = true;
+                    statusBar.innerText = t.camSuccess;
+                    sendVideoFrame();
                 })
                 .catch((err) => {
                     console.error(err);
