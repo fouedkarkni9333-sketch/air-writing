@@ -29,9 +29,13 @@
             border-radius: 16px;
             overflow: hidden;
             box-shadow: 0 0 25px rgba(0, 255, 204, 0.4);
-            background: #000;
+            background: #111;
             border: 2px solid #00ffcc;
             transition: border-color 0.5s;
+            min-height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         video, canvas {
             width: 100%;
@@ -43,6 +47,7 @@
             position: absolute;
             top: 0;
             left: 0;
+            pointer-events: none;
         }
         .status-bar {
             margin-top: 10px;
@@ -132,7 +137,6 @@
     </div>
 
     <script>
-        // قاموس اللغات التلقائي (يدعم العربية، الفرنسية، الإنجليزية، الإسبانية، والألمانية كمثال أساسي)
         const translations = {
             ar: {
                 title: "Air Maestro - حديقة الوحوش العازفة",
@@ -147,9 +151,9 @@
                 lblLives: "الأرواح",
                 lblShield: "الدرع",
                 lblSlow: "الإبطاء",
-                camStarting: "جاري تشغيل الكاميرا...",
+                camStarting: "جاري تشغيل الكاميرا وإعطاء الصلاحيات...",
                 camSuccess: "الكاميرا تعمل بنجاح! استمتع باللعبة.",
-                camError: "خطأ في تشغيل الكاميرا: يرجى السماح بالصلاحية.",
+                camError: "خطأ: يرجى السماح للمتصفح بالوصول إلى الكاميرا.",
                 camFail: "فشل تشغيل الكاميرا!",
                 gameStarted: "بدأت اللعبة! حرك يدك الآن.",
                 gameOver: "انتهت اللعبة! 💥",
@@ -164,9 +168,9 @@
                 monsterCalled: "تم استدعاء: "
             },
             fr: {
-                title: "Air Maestro - Jardin des Monstres Musiciens",
-                mainTitle: "👾 Jardin des Monstres Musiciens - Défi",
-                statusStart: "Appuyez sur \"Activer la caméra\" pour commencer !",
+                title: "Air Maestro - Jardin des Monstres",
+                mainTitle: "👾 Jardin des Monstres - Défi",
+                statusStart: "Appuyez sur \"Activer la caméra\" !",
                 btnCam: "Activer Caméra 📷",
                 btnMonster: "Changer Monstre 🎭",
                 btnReset: "Recommencer",
@@ -178,7 +182,7 @@
                 lblSlow: "Lent",
                 camStarting: "Démarrage de la caméra...",
                 camSuccess: "Caméra active ! Bon jeu.",
-                camError: "Erreur caméra : veuillez autoriser l'accès.",
+                camError: "Erreur : autorisez l'accès à la caméra.",
                 camFail: "Échec du démarrage de la caméra !",
                 gameStarted: "Jeu commencé ! Bougez votre main.",
                 gameOver: "Game Over ! 💥",
@@ -193,9 +197,9 @@
                 monsterCalled: "Monstre invoqué : "
             },
             es: {
-                title: "Air Maestro - Jardín de Monstruos Musicales",
+                title: "Air Maestro - Jardín de Monstruos",
                 mainTitle: "👾 Jardín de Monstruos - Desafío",
-                statusStart: "¡Presiona \"Activar Cámara\" para comenzar!",
+                statusStart: "¡Presiona \"Activar Cámara\"!",
                 btnCam: "Activar Cámara 📷",
                 btnMonster: "Cambiar Monstruo 🎭",
                 btnReset: "Reiniciar",
@@ -206,17 +210,17 @@
                 lblShield: "Escudo",
                 lblSlow: "Lento",
                 camStarting: "Iniciando cámara...",
-                camSuccess: "¡Cámara activa! Disfruta el juego.",
-                camError: "Error de cámara: permite el acceso.",
+                camSuccess: "¡Cámara activa! Disfruta.",
+                camError: "Error: permite el acceso a la cámara.",
                 camFail: "¡Fallo al iniciar la cámara!",
                 gameStarted: "¡Juego iniciado! Mueve tu mano.",
                 gameOver: "¡Juego Terminado! 💥",
                 finalScore: "Puntuación final: ",
-                bombWarning: "⚠️ ¡Cuidado! ¡Bomba explotada!",
-                starMsg: "⭐ ¡Estrella de la suerte! +50 pts",
+                bombWarning: "⚠️ ¡Cuidado! ¡Bomba!",
+                starMsg: "⭐ ¡Estrella! +50 pts",
                 shieldMsg: "🛡️ ¡Escudo obtenido!",
-                shieldBlocked: "🛡️ ¡El escudo bloqueó la bomba!",
-                slowMsg: "⏳ ¡Tiempo ralentizado por 5s!",
+                shieldBlocked: "🛡️ ¡Escudo bloqueó la bomba!",
+                slowMsg: "⏳ ¡Ralentizado por 5s!",
                 levelUp: "🎉 ¡Nivel alcanzado: ",
                 monsters: ["Monstruo Espacial (Blob)", "Monstruo Pincho (Zouzo)", "Monstruo Robot (Bibo)"],
                 monsterCalled: "Monstruo invocado: "
@@ -235,10 +239,10 @@
                 lblShield: "Shield",
                 lblSlow: "Slow",
                 camStarting: "Starting camera...",
-                camSuccess: "Camera active! Enjoy the game.",
-                camError: "Camera error: Please allow permissions.",
+                camSuccess: "Camera active! Enjoy.",
+                camError: "Camera error: Please allow camera permissions.",
                 camFail: "Camera failed to start!",
-                gameStarted: "Game started! Move your hand now.",
+                gameStarted: "Game started! Move your hand.",
                 gameOver: "Game Over! 💥",
                 finalScore: "Final Score: ",
                 bombWarning: "⚠️ Watch out! Bomb exploded!",
@@ -252,12 +256,10 @@
             }
         };
 
-        // تحديد لغة المتصفح تلقائياً (الافتراضي إنجليزي إذا لم تتطابق اللغة)
         const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2);
         const lang = translations[userLang] ? userLang : 'en';
         const t = translations[lang];
 
-        // ضبط اتجاه الصفحة حسب اللغة (RTL للعربية، LTR لباقي اللغات)
         const htmlRoot = document.getElementById('htmlRoot');
         if (lang === 'ar') {
             htmlRoot.setAttribute('dir', 'rtl');
@@ -267,7 +269,6 @@
             htmlRoot.setAttribute('lang', lang);
         }
 
-        // تطبيق النصوص المترجمة على الواجهة فوراً
         document.getElementById('pageTitle').innerText = t.title;
         document.getElementById('mainTitle').innerText = t.mainTitle;
         document.getElementById('statusBar').innerText = t.statusStart;
@@ -435,4 +436,294 @@
 
             canvasCtx.beginPath();
             canvasCtx.arc(-15, -10, 3, 0, Math.PI * 2);
-            canvasCtx.arc(15, -10,
+            canvasCtx.arc(15, -10, 3, 0, Math.PI * 2);
+            canvasCtx.fillStyle = '#000';
+            canvasCtx.fill();
+
+            canvasCtx.beginPath();
+            if (isPlaying) {
+                canvasCtx.arc(0, 15, 14, 0, Math.PI * 2); 
+                canvasCtx.fillStyle = '#000';
+                canvasCtx.fill();
+                canvasCtx.strokeStyle = '#fff';
+                canvasCtx.stroke();
+            } else {
+                canvasCtx.arc(0, 15, 10, 0, Math.PI); 
+                canvasCtx.strokeStyle = '#000';
+                canvasCtx.lineWidth = 2;
+                canvasCtx.stroke();
+            }
+
+            canvasCtx.restore();
+        }
+
+        function onResults(results) {
+            latestResults = results;
+        }
+
+        function gameLoop() {
+            if (isRunning) {
+                updateAndRender(latestResults);
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateAndRender(results) {
+            if (videoElement.videoWidth > 0 && canvasElement.width !== videoElement.videoWidth) {
+                canvasElement.width = videoElement.videoWidth;
+                canvasElement.height = videoElement.videoHeight;
+            }
+
+            if (canvasElement.width === 0 || canvasElement.height === 0) return;
+
+            let newLevel = Math.floor(score / 100) + 1;
+            if (newLevel > level) {
+                level = newLevel;
+                statusBar.innerText = `${t.levelUp} ${level}!`;
+                videoContainer.style.borderColor = `hsl(${level * 60}, 100%, 50%)`;
+            }
+
+            canvasCtx.save();
+
+            if (screenShake > 0) {
+                let shakeX = (Math.random() - 0.5) * screenShake;
+                let shakeY = (Math.random() - 0.5) * screenShake;
+                canvasCtx.translate(shakeX, shakeY);
+                screenShake *= 0.85;
+            }
+
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            if (results && results.image) {
+                canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            }
+
+            if (combo >= 10) {
+                canvasCtx.fillStyle = `hsla(${Date.now() / 3 % 360}, 100%, 50%, 0.15)`;
+                canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+            }
+
+            if (isGameOver) {
+                canvasCtx.fillStyle = "rgba(0, 0, 0, 0.9)";
+                canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+                canvasCtx.fillStyle = "#ff007f";
+                canvasCtx.font = "bold 32px Arial";
+                canvasCtx.textAlign = "center";
+                canvasCtx.fillText(t.gameOver, canvasElement.width / 2, canvasElement.height / 2 - 20);
+                canvasCtx.fillStyle = "#ffffff";
+                canvasCtx.font = "bold 18px Arial";
+                canvasCtx.fillText(`${t.finalScore} ${score}`, canvasElement.width / 2, canvasElement.height / 2 + 25);
+                canvasCtx.restore();
+                updateUI();
+                return;
+            }
+
+            let monsterX = canvasElement.width / 2;
+            let monsterY = canvasElement.height / 2;
+            let handActive = false;
+
+            if (results && results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+                const indexFinger = landmarks[8]; 
+                monsterX = (1 - indexFinger.x) * canvasElement.width;
+                monsterY = indexFinger.y * canvasElement.height;
+
+                handActive = true;
+                lastMoveTime = Date.now();
+            }
+
+            for (let i = items.length - 1; i >= 0; i--) {
+                let item = items[i];
+                item.y += item.speed;
+
+                canvasCtx.save();
+                canvasCtx.beginPath();
+                canvasCtx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
+
+                if (item.type === 'bomb') {
+                    canvasCtx.fillStyle = "#111";
+                    canvasCtx.shadowBlur = 12;
+                    canvasCtx.shadowColor = "#ff0000";
+                    canvasCtx.fill();
+                    canvasCtx.lineWidth = 2;
+                    canvasCtx.strokeStyle = "#ff0000";
+                    canvasCtx.stroke();
+                    canvasCtx.fillStyle = "#ff5555";
+                    canvasCtx.font = "bold 14px Arial";
+                    canvasCtx.fillText("💣", item.x - 8, item.y + 5);
+                } else if (item.type === 'star') {
+                    canvasCtx.fillStyle = "#ffee00";
+                    canvasCtx.shadowBlur = 15;
+                    canvasCtx.shadowColor = "#ffee00";
+                    canvasCtx.fill();
+                    canvasCtx.font = "bold 16px Arial";
+                    canvasCtx.fillText("⭐", item.x - 8, item.y + 6);
+                } else if (item.type === 'shield') {
+                    canvasCtx.fillStyle = "#00ffff";
+                    canvasCtx.shadowBlur = 15;
+                    canvasCtx.shadowColor = "#00ffff";
+                    canvasCtx.fill();
+                    canvasCtx.font = "bold 16px Arial";
+                    canvasCtx.fillText("🛡️", item.x - 8, item.y + 6);
+                } else if (item.type === 'slow') {
+                    canvasCtx.fillStyle = "#aa00ff";
+                    canvasCtx.shadowBlur = 15;
+                    canvasCtx.shadowColor = "#aa00ff";
+                    canvasCtx.fill();
+                    canvasCtx.font = "bold 16px Arial";
+                    canvasCtx.fillText("⏳", item.x - 8, item.y + 6);
+                } else {
+                    canvasCtx.fillStyle = item.color;
+                    canvasCtx.shadowBlur = combo >= 10 ? 25 : 15;
+                    canvasCtx.shadowColor = item.color;
+                    canvasCtx.fill();
+                    canvasCtx.lineWidth = 2;
+                    canvasCtx.strokeStyle = '#fff';
+                    canvasCtx.stroke();
+                }
+                canvasCtx.restore();
+
+                let dist = Math.hypot(monsterX - item.x, (monsterY - 40) - item.y);
+                if (dist < 45) {
+                    if (item.type === 'bomb') {
+                        if (hasShield) {
+                            hasShield = false;
+                            statusBar.innerText = t.shieldBlocked;
+                            playNote(400, 'sine', 0.2, 0.1);
+                        } else {
+                            lives--;
+                            combo = 0;
+                            screenShake = 15; 
+                            playNote(60, 'sawtooth', 0.25, 0.15); 
+                            statusBar.innerText = t.bombWarning;
+                            if (lives <= 0) isGameOver = true;
+                        }
+                    } else if (item.type === 'star') {
+                        score += 50;
+                        playNote(500, 'triangle', 0.2, 0.1);
+                        statusBar.innerText = t.starMsg;
+                    } else if (item.type === 'shield') {
+                        hasShield = true;
+                        playNote(450, 'sine', 0.2, 0.1);
+                        statusBar.innerText = t.shieldMsg;
+                    } else if (item.type === 'slow') {
+                        isSlowMotion = true;
+                        if (slowTimer) clearTimeout(slowTimer);
+                        slowTimer = setTimeout(() => { isSlowMotion = false; }, 5000);
+                        playNote(300, 'square', 0.2, 0.1);
+                        statusBar.innerText = t.slowMsg;
+                    } else {
+                        let multiplier = combo >= 10 ? 2 : 1;
+                        score += (15 + (combo * 5)) * multiplier;
+                        combo++;
+
+                        let freq = 180 + (combo * 25);
+                        playNote(freq, undefined, 0.1, 0.08);
+
+                        for (let p = 0; p < 8; p++) {
+                            particles.push({
+                                x: item.x,
+                                y: item.y,
+                                radius: Math.random() * 6 + 2,
+                                color: item.color,
+                                alpha: 1,
+                                vx: (Math.random() - 0.5) * 12,
+                                vy: (Math.random() - 0.5) * 12
+                            });
+                        }
+                    }
+                    items.splice(i, 1);
+                } else if (item.y > canvasElement.height + 25) {
+                    if (item.type === 'normal' && combo > 0) combo = 0;
+                    items.splice(i, 1);
+                }
+            }
+
+            if (handActive) {
+                drawMonster(monsterX, monsterY - 40, true);
+            } else {
+                if (Date.now() - lastMoveTime > 2000) {
+                    drawMonster(canvasElement.width / 2, canvasElement.height / 2, false);
+                } else {
+                    drawMonster(monsterX, monsterY - 40, true);
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.05;
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                } else {
+                    canvasCtx.save();
+                    canvasCtx.globalAlpha = p.alpha;
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+                    canvasCtx.fillStyle = p.color;
+                    canvasCtx.fill();
+                    canvasCtx.restore();
+                }
+            }
+
+            updateUI();
+            canvasCtx.restore();
+        }
+
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.7
+        });
+
+        hands.onResults(onResults);
+
+        function startCamera() {
+            initAudio();
+            statusBar.innerText = t.camStarting;
+
+            if (cameraInstance) return;
+
+            // استخدام دالة بديلة مباشرة لطلب الكاميرا لمنع أي توقف في متصفحات الهواتف
+            navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
+                .then((stream) => {
+                    videoElement.srcObject = stream;
+                    videoElement.play();
+                    
+                    cameraInstance = new Camera(videoElement, {
+                        onFrame: async () => {
+                            if (videoElement.readyState >= 2) {
+                                await hands.send({ image: videoElement });
+                            }
+                        },
+                        width: 640,
+                        height: 480
+                    });
+
+                    cameraInstance.start().then(() => {
+                        isRunning = true;
+                        statusBar.innerText = t.camSuccess;
+                    }).catch(() => {
+                        isRunning = true;
+                        statusBar.innerText = t.camSuccess;
+                    });
+                })
+                .catch((err) => {
+                    console.error(err);
+                    alert(t.camError);
+                    statusBar.innerText = t.camFail;
+                    cameraInstance = null;
+                });
+        }
+
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
