@@ -311,6 +311,8 @@
         let cameraInstance = null;
         let latestResults = null;
         let isRunning = false;
+        let smoothedX = 0;
+        let smoothedY = 0;
 
         function updateUI() {
             scoreText.innerText = score;
@@ -527,8 +529,21 @@
             if (results && results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 const landmarks = results.multiHandLandmarks[0];
                 const indexFinger = landmarks[8]; 
-                monsterX = (1 - indexFinger.x) * canvasElement.width;
-                monsterY = indexFinger.y * canvasElement.height;
+                
+                // تصحيح اتجاه حركة الأفق (اليمين واليسار) وعكسها لتتوافق تماماً مع مرآة الكاميرا
+                let targetX = indexFinger.x * canvasElement.width;
+                let targetY = indexFinger.y * canvasElement.height;
+
+                if (smoothedX === 0 && smoothedY === 0) {
+                    smoothedX = targetX;
+                    smoothedY = targetY;
+                } else {
+                    smoothedX += (targetX - smoothedX) * 0.45;
+                    smoothedY += (targetY - smoothedY) * 0.45;
+                }
+
+                monsterX = smoothedX;
+                monsterY = smoothedY;
 
                 handActive = true;
                 lastMoveTime = Date.now();
