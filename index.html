@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Maestro - حديقة الوحوش العازفة</title>
+    <title>Air Maestro - حديقة الوحوش العازفة (الإصدار الاحترافي)</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
@@ -104,14 +104,21 @@
         let lastMoveTime = Date.now();
         let screenShake = 0;
         let cameraInstance = null;
+        let latestResults = null;
+        let isRunning = false;
 
+        // إدارة الصوت بطريقة آمنة
         let audioCtx = null;
         function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            } catch (e) {
+                console.error("Audio Context error:", e);
             }
         }
         
@@ -133,7 +140,7 @@
                 osc.start();
                 osc.stop(audioCtx.currentTime + duration);
             } catch (e) {
-                // تجاهل الأخطاء
+                // تجاوز الأخطاء الصامتة
             }
         }
 
@@ -153,8 +160,9 @@
             statusBar.innerText = "بدأت اللعبة! حرك يدك الآن.";
         }
 
+        // توليد العناصر الهابطة بمعدل مستقر
         setInterval(() => {
-            if (canvasElement.width > 0 && !isGameOver) {
+            if (isRunning && canvasElement.width > 0 && !isGameOver) {
                 let isBomb = Math.random() < 0.25; 
                 let speedMultiplier = 1 + (score / 200); 
                 items.push({
@@ -219,13 +227,26 @@
             canvasCtx.restore();
         }
 
+        // معالجة النتائج الواردة من نموذج تتبع اليدين
         function onResults(results) {
+            latestResults = results;
+        }
+
+        // حلقة الرسم والتحديث الأساسية المعتمدة على محرك المتصفح للأداء العالي
+        function gameLoop() {
+            if (isRunning) {
+                updateAndRender(latestResults);
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateAndRender(results) {
             if (videoElement.videoWidth > 0 && canvasElement.width !== videoElement.videoWidth) {
                 canvasElement.width = videoElement.videoWidth;
                 canvasElement.height = videoElement.videoHeight;
             }
 
-            if (canvasElement.width === 0) return;
+            if (canvasElement.width === 0 || canvasElement.height === 0) return;
 
             canvasCtx.save();
 
@@ -237,7 +258,10 @@
             }
 
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            
+            if (results && results.image) {
+                canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            }
 
             if (combo >= 10) {
                 canvasCtx.fillStyle = `hsla(${Date.now() / 3 % 360}, 100%, 50%, 0.15)`;
@@ -262,7 +286,7 @@
             let monsterY = canvasElement.height / 2;
             let handActive = false;
 
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            if (results && results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 const landmarks = results.multiHandLandmarks[0];
                 const indexFinger = landmarks[8]; 
                 monsterX = (1 - indexFinger.x) * canvasElement.width;
@@ -383,7 +407,7 @@
                 canvasCtx.fillText(`الكومبو: x${combo}`, 25, 65);
             }
 
-            let heartsText = "❤️ ".repeat(lives);
+            let heartsText = "❤️ ".repeat(Math.max(0, lives));
             canvasCtx.fillStyle = "#ff3333";
             canvasCtx.fillText(`الأرواح: ${heartsText}`, 25, 95);
 
@@ -407,26 +431,40 @@
         function startCamera() {
             initAudio();
             statusBar.innerText = "جاري تشغيل الكاميرا...";
-            
-            // التأكد من عدم إنشاء أكثر من كائن كاميرا في نفس الوقت
-            if (cameraInstance) return;
 
-            cameraInstance = new Camera(videoElement, {
-                onFrame: async () => {
-                    await hands.send({ image: videoElement });
-                },
-                width: 640,
-                height: 480
-            });
+            if (cameraInstance) {
+                return;
+            }
 
-            cameraInstance.start().then(() => {
-                statusBar.innerText = "الكاميرا تعمل بنجاح! استمتع باللعبة.";
-            }).catch(err => {
-                alert("خطأ في تشغيل الكاميرا: يرجى السماح بالصلاحية.");
-                statusBar.innerText = "فشل تشغيل الكاميرا!";
+            try {
+                cameraInstance = new Camera(videoElement, {
+                    onFrame: async () => {
+                        if (videoElement.readyState >= 2) {
+                            await hands.send({ image: videoElement });
+                        }
+                    },
+                    width: 640,
+                    height: 480
+                });
+
+                cameraInstance.start().then(() => {
+                    isRunning = true;
+                    statusBar.innerText = "الكاميرا تعمل بنجاح! استمتع باللعبة.";
+                }).catch(err => {
+                    console.error(err);
+                    alert("خطأ في تشغيل الكاميرا: يرجى السماح بالصلاحية أو التأكد من عدم استخدامها في تطبيق آخر.");
+                    statusBar.innerText = "فشل تشغيل الكاميرا!";
+                    cameraInstance = null;
+                });
+            } catch (e) {
+                console.error(e);
+                statusBar.innerText = "حدث خطأ أثناء تهيئة الكاميرا.";
                 cameraInstance = null;
-            });
+            }
         }
+
+        // بدء حلقة التشغيل الرئيسية للرسومات
+        requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
