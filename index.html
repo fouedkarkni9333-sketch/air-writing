@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Air Maestro - حديقة الوحوش العازفة</title>
-    <!-- استخدام إصدار مستقر ومحدث من مكتبات MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
@@ -36,7 +35,7 @@
             width: 100%;
             height: auto;
             display: block;
-            transform: scaleX(-1); /* مرآة */
+            transform: scaleX(-1);
         }
         canvas {
             position: absolute;
@@ -49,6 +48,7 @@
             gap: 10px;
             justify-content: center;
             max-width: 400px;
+            flex-wrap: wrap;
         }
         button {
             padding: 10px 16px;
@@ -61,6 +61,7 @@
             transition: transform 0.1s;
         }
         button:active { transform: scale(0.95); }
+        .btn-cam { background-color: #00ffcc; color: #000; }
         .btn-party { background-color: #ff007f; color: white; }
         .btn-reset { background-color: #3f3f46; color: white; }
         .status-bar {
@@ -79,9 +80,10 @@
         <canvas id="output_canvas"></canvas>
     </div>
 
-    <div class="status-bar" id="statusBar">جاري تفعيل الكاميرا... يرجى السماح بالصلاحية</div>
+    <div class="status-bar" id="statusBar">اضغط على زر تشغيل الكاميرا للبدء!</div>
 
     <div class="controls">
+        <button class="btn-cam" onclick="startCamera()">تشغيل الكاميرا 📷</button>
         <button class="btn-party" onclick="switchMonster()">تغيير نوع الوحش 🎭</button>
         <button class="btn-reset" onclick="resetGame()">إعادة اللعبة</button>
     </div>
@@ -99,8 +101,8 @@
         let lives = 3;
         let monsterType = 0; 
         let isGameOver = false;
+        let cameraInstance = null;
 
-        // نظام الأصوات عبر Web Audio API
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
         function playSound(freq, type = 'sine', duration = 0.2, volume = 0.1) {
@@ -135,10 +137,9 @@
             combo = 0;
             lives = 3;
             isGameOver = false;
-            statusBar.innerText = "التقط النوتات وتجنب القنابل السوداء!";
+            statusBar.innerText = "اللعبه تعمل! حرك يدك لالتقاط النوتات.";
         }
 
-        // توليد عناصر هابطة
         setInterval(() => {
             if (canvasElement.width > 0 && !isGameOver) {
                 let isBomb = Math.random() < 0.25;
@@ -204,11 +205,9 @@
         }
 
         function onResults(results) {
-            // ضبط أبعاد الكانفاس لتتطابق مع الفيديو الفعلي
             if (videoElement.videoWidth > 0 && canvasElement.width !== videoElement.videoWidth) {
                 canvasElement.width = videoElement.videoWidth;
                 canvasElement.height = videoElement.videoHeight;
-                statusBar.innerText = "حرك يدك لتلعب!";
             }
 
             if (canvasElement.width === 0) return;
@@ -362,7 +361,7 @@
         }
 
         const hands = new Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
         });
 
         hands.setOptions({
@@ -374,18 +373,23 @@
 
         hands.onResults(onResults);
 
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await hands.send({ image: videoElement });
-            },
-            width: 640,
-            height: 480
-        });
+        function startCamera() {
+            statusBar.innerText = "جاري طلب إذن الكاميرا...";
+            cameraInstance = new Camera(videoElement, {
+                onFrame: async () => {
+                    await hands.send({ image: videoElement });
+                },
+                width: 640,
+                height: 480
+            });
 
-        camera.start().catch(err => {
-            alert("خطأ في تشغيل الكاميرا: تأكد من إعطاء صلاحية الكاميرا وأن المتصفح يدعمها.");
-            statusBar.innerText = "فشل تشغيل الكاميرا!";
-        });
+            cameraInstance.start().then(() => {
+                statusBar.innerText = "تم تفعيل الكاميرا بنجاح! حرك يدك.";
+            }).catch(err => {
+                alert("خطأ: يجدر السماح بالصلاحية أو استخدام متصفح يدعم الكاميرا.");
+                statusBar.innerText = "فشل تشغيل الكاميرا!";
+            });
+        }
     </script>
 </body>
 </html>
