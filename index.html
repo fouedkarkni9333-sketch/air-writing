@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Maestro - حديقة الوحوش العازفة (الإصدار الكامل)</title>
-    <!-- مكتبات MediaPipe للبراوزر -->
+    <title>Air Maestro - حديقة الوحوش العازفة</title>
+    <!-- استخدام إصدار مستقر ومحدث من مكتبات MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
@@ -75,11 +75,11 @@
 
     <h2>👾 حديقة الوحوش العازفة - التحدي الأقصى</h2>
     <div class="video-container">
-        <video id="webcam" autoplay playsinline></video>
+        <video id="webcam" autoplay playsinline muted></video>
         <canvas id="output_canvas"></canvas>
     </div>
 
-    <div class="status-bar" id="statusBar">التقط النوتات وتجنب القنابل السوداء!</div>
+    <div class="status-bar" id="statusBar">جاري تفعيل الكاميرا... يرجى السماح بالصلاحية</div>
 
     <div class="controls">
         <button class="btn-party" onclick="switchMonster()">تغيير نوع الوحش 🎭</button>
@@ -93,7 +93,7 @@
         const statusBar = document.getElementById('statusBar');
 
         let particles = [];
-        let items = []; // ستشمل النوتات والقنابل
+        let items = [];
         let score = 0;
         let combo = 0;
         let lives = 3;
@@ -135,35 +135,33 @@
             combo = 0;
             lives = 3;
             isGameOver = false;
-            statusBar.innerText = "لعبة جديدة! حرك يدك الآن.";
+            statusBar.innerText = "التقط النوتات وتجنب القنابل السوداء!";
         }
 
-        // توليد عناصر هابطة (نوتات موسيقية أو قنابل)
+        // توليد عناصر هابطة
         setInterval(() => {
             if (canvasElement.width > 0 && !isGameOver) {
-                let isBomb = Math.random() < 0.25; // نسبة ظهور القنابل 25%
+                let isBomb = Math.random() < 0.25;
                 items.push({
                     x: Math.random() * (canvasElement.width - 80) + 40,
                     y: -30,
-                    speed: 2.5 + Math.random() * 2.5,
+                    speed: 2.5 + Math.random() * 2,
                     radius: isBomb ? 22 : 18,
                     isBomb: isBomb,
                     color: isBomb ? '#111111' : ['#ff007f', '#00ffcc', '#ffee00', '#ff5500'][Math.floor(Math.random() * 4)]
                 });
             }
-        }, 1100);
+        }, 1200);
 
         function drawMonster(x, y, isPlaying) {
             canvasCtx.save();
             canvasCtx.translate(x, y);
 
-            // إذا كان في وضع Fever Mode، يتغير لون الوحش بسرعة مع نبضات الشاشة
             let baseColor = monsterType === 0 ? '#ff007f' : (monsterType === 1 ? '#00ffcc' : '#ffee00');
             if (combo >= 10) {
                 baseColor = `hsl(${Date.now() / 5 % 360}, 100%, 50%)`;
             }
 
-            // جسم الوحش
             canvasCtx.beginPath();
             let radius = 45 + (isPlaying ? Math.sin(Date.now() / 40) * 6 : 0);
             canvasCtx.arc(0, 0, radius, 0, Math.PI * 2);
@@ -176,21 +174,18 @@
             canvasCtx.stroke();
             canvasCtx.shadowBlur = 0;
 
-            // العيون
             canvasCtx.beginPath();
             canvasCtx.arc(-15, -10, 8, 0, Math.PI * 2);
             canvasCtx.arc(15, -10, 8, 0, Math.PI * 2);
             canvasCtx.fillStyle = '#fff';
             canvasCtx.fill();
 
-            // بؤبؤ العين
             canvasCtx.beginPath();
             canvasCtx.arc(-15, -10, 3, 0, Math.PI * 2);
             canvasCtx.arc(15, -10, 3, 0, Math.PI * 2);
             canvasCtx.fillStyle = '#000';
             canvasCtx.fill();
 
-            // الفم
             canvasCtx.beginPath();
             if (isPlaying) {
                 canvasCtx.arc(0, 15, 14, 0, Math.PI * 2);
@@ -209,10 +204,15 @@
         }
 
         function onResults(results) {
-            canvasElement.width = videoElement.videoWidth || 640;
-            canvasElement.height = videoElement.videoHeight || 480;
+            // ضبط أبعاد الكانفاس لتتطابق مع الفيديو الفعلي
+            if (videoElement.videoWidth > 0 && canvasElement.width !== videoElement.videoWidth) {
+                canvasElement.width = videoElement.videoWidth;
+                canvasElement.height = videoElement.videoHeight;
+                statusBar.innerText = "حرك يدك لتلعب!";
+            }
 
-            // 1. رسم الكاميرا وتأثير Fever Mode على الخلفية إذا وصل الكومبو لـ 10
+            if (canvasElement.width === 0) return;
+
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
@@ -250,7 +250,6 @@
                 handActive = true;
             }
 
-            // 2. تحديث ورسم العناصر الساقطة (نوتات وقنابل)
             for (let i = items.length - 1; i >= 0; i--) {
                 let item = items[i];
                 item.y += item.speed;
@@ -260,7 +259,6 @@
                 canvasCtx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
                 
                 if (item.isBomb) {
-                    // رسم القنبلة بلون أسود مع فتيل محترق
                     canvasCtx.fillStyle = "#1a1a1a";
                     canvasCtx.shadowBlur = 12;
                     canvasCtx.shadowColor = "#ff0000";
@@ -268,12 +266,10 @@
                     canvasCtx.lineWidth = 2;
                     canvasCtx.strokeStyle = "#ff3333";
                     canvasCtx.stroke();
-                    // رسم علامة X أو فتيل
                     canvasCtx.fillStyle = "#ff0000";
                     canvasCtx.font = "bold 14px Arial";
                     canvasCtx.fillText("💣", item.x - 10, item.y + 5);
                 } else {
-                    // رسم النوتة الموسيقية
                     canvasCtx.fillStyle = item.color;
                     canvasCtx.shadowBlur = combo >= 10 ? 25 : 15;
                     canvasCtx.shadowColor = item.color;
@@ -284,12 +280,112 @@
                 }
                 canvasCtx.restore();
 
-                // فحص الاصطدام مع الوحش
                 let dist = Math.hypot(monsterX - item.x, (monsterY - 40) - item.y);
                 if (dist < 50) {
                     if (item.isBomb) {
-                        // اصطدام بقنبلة! خسر محاولة
                         lives--;
                         combo = 0;
-                        playSound(80, 'sawtooth', 0.3, 0.2); // صوت نشاز حاد
-                        statusBar.innerText = "احتذِير! لقد اصطدمت بقن
+                        playSound(80, 'sawtooth', 0.3, 0.2);
+                        statusBar.innerText = "احذر! اصطدمت بقنبلة!";
+                        if (lives <= 0) isGameOver = true;
+                    } else {
+                        let multiplier = combo >= 10 ? 2 : 1;
+                        score += (15 + (combo * 5)) * multiplier;
+                        combo++;
+                        playSound(200 + (combo * 25), monsterType === 0 ? 'sawtooth' : 'triangle', 0.15, 0.1);
+
+                        for (let p = 0; p < 8; p++) {
+                            particles.push({
+                                x: item.x,
+                                y: item.y,
+                                radius: Math.random() * 6 + 3,
+                                color: item.color,
+                                alpha: 1,
+                                vx: (Math.random() - 0.5) * 12,
+                                vy: (Math.random() - 0.5) * 12
+                            });
+                        }
+                    }
+                    items.splice(i, 1);
+                } else if (item.y > canvasElement.height + 30) {
+                    if (!item.isBomb && combo > 0) combo = 0;
+                    items.splice(i, 1);
+                }
+            }
+
+            if (handActive) {
+                drawMonster(monsterX, monsterY - 40, true);
+            } else {
+                drawMonster(canvasElement.width / 2, canvasElement.height / 2, false);
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.05;
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                } else {
+                    canvasCtx.save();
+                    canvasCtx.globalAlpha = p.alpha;
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+                    canvasCtx.fillStyle = p.color;
+                    canvasCtx.fill();
+                    canvasCtx.restore();
+                }
+            }
+
+            canvasCtx.save();
+            canvasCtx.font = "bold 20px Arial";
+            canvasCtx.shadowBlur = 8;
+            canvasCtx.shadowColor = "#000000";
+            
+            canvasCtx.fillStyle = "#00ffcc";
+            canvasCtx.fillText(`النقاط: ${score}`, 25, 35);
+            
+            if (combo >= 10) {
+                canvasCtx.fillStyle = "#ffee00";
+                canvasCtx.fillText(`🔥 FEVER MODE x${combo} 🔥`, 25, 70);
+            } else {
+                canvasCtx.fillStyle = "#ff007f";
+                canvasCtx.fillText(`الكومبو: x${combo}`, 25, 70);
+            }
+
+            let heartsText = "❤️ ".repeat(lives);
+            canvasCtx.fillStyle = "#ff3333";
+            canvasCtx.fillText(`الأرواح: ${heartsText}`, 25, 105);
+
+            canvasCtx.restore();
+        }
+
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.7
+        });
+
+        hands.onResults(onResults);
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480
+        });
+
+        camera.start().catch(err => {
+            alert("خطأ في تشغيل الكاميرا: تأكد من إعطاء صلاحية الكاميرا وأن المتصفح يدعمها.");
+            statusBar.innerText = "فشل تشغيل الكاميرا!";
+        });
+    </script>
+</body>
+</html>
