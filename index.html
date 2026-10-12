@@ -19,6 +19,7 @@
             justify-content: flex-start;
             min-height: 100vh;
             padding: 10px;
+            box-sizing: border-box;
         }
         h2 { margin: 8px; font-size: 18px; color: #00ffcc; text-shadow: 0 0 10px rgba(0,255,204,0.7); }
         .video-container {
@@ -42,57 +43,63 @@
             top: 0;
             left: 0;
         }
+        .status-bar {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #ff007f;
+            font-weight: bold;
+        }
         .controls {
-            margin-top: 15px;
+            margin-top: 12px;
             display: flex;
-            gap: 10px;
+            gap: 8px;
             justify-content: center;
+            width: 100%;
             max-width: 400px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
         button {
-            padding: 10px 16px;
+            flex: 1;
+            padding: 12px 8px;
             border: none;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 13px;
             cursor: pointer;
             font-weight: bold;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
             transition: transform 0.1s;
+            white-space: nowrap;
         }
         button:active { transform: scale(0.95); }
         .btn-cam { background-color: #00ffcc; color: #000; }
         .btn-party { background-color: #ff007f; color: white; }
         .btn-reset { background-color: #3f3f46; color: white; }
-        .status-bar {
-            margin-top: 8px;
-            font-size: 14px;
-            color: #ff007f;
-            font-weight: bold;
-        }
-        /* تصميم لوحة الإحصائيات أسفل الأزرار */
-        .game-stats {
+
+        /* لوحة النتيجة والأرواح في الأسفل */
+        .score-board {
             margin-top: 15px;
-            background: #16161f;
-            border: 1px solid #333;
-            padding: 12px 20px;
-            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            background: #14141d;
+            border: 2px solid #ff007f;
+            border-radius: 14px;
+            padding: 12px;
+            box-sizing: border-box;
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.3);
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            max-width: 350px;
-            width: 100%;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            gap: 8px;
         }
-        .stat-row {
+        .score-row {
             display: flex;
-            justify-content: space-between;
+            justify-content: space-around;
+            align-items: center;
             font-size: 16px;
             font-weight: bold;
         }
-        .stat-score { color: #00ffcc; }
-        .stat-combo { color: #ffee00; }
-        .stat-lives { color: #ff3333; font-size: 18px; }
+        .score-box { color: #00ffcc; }
+        .combo-box { color: #ffee00; }
+        .lives-box { font-size: 20px; color: #ff3333; letter-spacing: 3px; }
     </style>
 </head>
 <body>
@@ -111,14 +118,14 @@
         <button class="btn-reset" onclick="resetGame()">إعادة اللعبة</button>
     </div>
 
-    <!-- لوحة النقاط والأرواح أسفل الأزرار -->
-    <div class="game-stats">
-        <div class="stat-row">
-            <span>النقاط: <span id="scoreVal" class="stat-score">0</span></span>
-            <span>الكومبو: <span id="comboVal" class="stat-combo">x0</span></span>
+    <!-- لوحة الأرواح والسكور أسفل الأزرار مباشرة -->
+    <div class="score-board">
+        <div class="score-row">
+            <div class="score-box">النقاط: <span id="scoreText">0</span></div>
+            <div class="combo-box">الكومبو: <span id="comboText">x0</span></div>
         </div>
-        <div class="stat-row" style="justify-content: center; margin-top: 4px;">
-            <span>الأرواح: <span id="livesVal" class="stat-lives">❤️❤️❤️</span></span>
+        <div class="score-row">
+            <div>الأرواح: <span id="livesText" class="lives-box">❤️❤️❤️</span></div>
         </div>
     </div>
 
@@ -128,9 +135,9 @@
         const canvasCtx = canvasElement.getContext('2d');
         const statusBar = document.getElementById('statusBar');
 
-        const scoreValElem = document.getElementById('scoreVal');
-        const comboValElem = document.getElementById('comboVal');
-        const livesValElem = document.getElementById('livesVal');
+        const scoreText = document.getElementById('scoreText');
+        const comboText = document.getElementById('comboText');
+        const livesText = document.getElementById('livesText');
 
         let particles = [];
         let items = []; 
@@ -146,13 +153,9 @@
         let isRunning = false;
 
         function updateUI() {
-            scoreValElem.innerText = score;
-            if (combo >= 10) {
-                comboValElem.innerText = `🔥 x${combo} (FEVER)`;
-            } else {
-                comboValElem.innerText = `x${combo}`;
-            }
-            livesValElem.innerText = "❤️ ".repeat(Math.max(0, lives));
+            scoreText.innerText = score;
+            comboText.innerText = combo >= 10 ? `🔥 x${combo}` : `x${combo}`;
+            livesText.innerText = "❤️".repeat(Math.max(0, lives));
         }
 
         let audioCtx = null;
@@ -164,9 +167,7 @@
                 if (audioCtx.state === 'suspended') {
                     audioCtx.resume();
                 }
-            } catch (e) {
-                console.error("Audio Context error:", e);
-            }
+            } catch (e) {}
         }
         
         function playNote(freq, typeOverride, duration = 0.15, vol = 0.08) {
@@ -229,7 +230,6 @@
             if (combo >= 10) {
                 baseColor = `hsl(${Date.now() / 4 % 360}, 100%, 50%)`;
             }
-            let eyeColor = '#ffffff';
 
             canvasCtx.beginPath();
             let radius = 45 + (isPlaying ? Math.sin(Date.now() / 30) * 6 : 0);
@@ -246,7 +246,7 @@
             canvasCtx.beginPath();
             canvasCtx.arc(-15, -10, 8, 0, Math.PI * 2);
             canvasCtx.arc(15, -10, 8, 0, Math.PI * 2);
-            canvasCtx.fillStyle = eyeColor;
+            canvasCtx.fillStyle = '#ffffff';
             canvasCtx.fill();
 
             canvasCtx.beginPath();
@@ -322,6 +322,7 @@
                 canvasCtx.font = "bold 18px Arial";
                 canvasCtx.fillText(`النتيجة النهائية: ${score}`, canvasElement.width / 2, canvasElement.height / 2 + 25);
                 canvasCtx.restore();
+                updateUI();
                 return;
             }
 
@@ -455,9 +456,7 @@
             initAudio();
             statusBar.innerText = "جاري تشغيل الكاميرا...";
 
-            if (cameraInstance) {
-                return;
-            }
+            if (cameraInstance) return;
 
             try {
                 cameraInstance = new Camera(videoElement, {
@@ -475,7 +474,7 @@
                     statusBar.innerText = "الكاميرا تعمل بنجاح! استمتع باللعبة.";
                 }).catch(err => {
                     console.error(err);
-                    alert("خطأ في تشغيل الكاميرا: يرجى السماح بالصلاحية أو التأكد من عدم استخدامها في تطبيق آخر.");
+                    alert("خطأ في تشغيل الكاميرا: يرجى السماح بالصلاحية.");
                     statusBar.innerText = "فشل تشغيل الكاميرا!";
                     cameraInstance = null;
                 });
