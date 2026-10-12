@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Maestro - حديقة الوحوش العازفة (الإصدار الاحترافي)</title>
+    <title>Air Maestro - حديقة الوحوش العازفة</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
@@ -70,6 +70,29 @@
             color: #ff007f;
             font-weight: bold;
         }
+        /* تصميم لوحة الإحصائيات أسفل الأزرار */
+        .game-stats {
+            margin-top: 15px;
+            background: #16161f;
+            border: 1px solid #333;
+            padding: 12px 20px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-width: 350px;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .stat-score { color: #00ffcc; }
+        .stat-combo { color: #ffee00; }
+        .stat-lives { color: #ff3333; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -88,11 +111,26 @@
         <button class="btn-reset" onclick="resetGame()">إعادة اللعبة</button>
     </div>
 
+    <!-- لوحة النقاط والأرواح أسفل الأزرار -->
+    <div class="game-stats">
+        <div class="stat-row">
+            <span>النقاط: <span id="scoreVal" class="stat-score">0</span></span>
+            <span>الكومبو: <span id="comboVal" class="stat-combo">x0</span></span>
+        </div>
+        <div class="stat-row" style="justify-content: center; margin-top: 4px;">
+            <span>الأرواح: <span id="livesVal" class="stat-lives">❤️❤️❤️</span></span>
+        </div>
+    </div>
+
     <script>
         const videoElement = document.getElementById('webcam');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
         const statusBar = document.getElementById('statusBar');
+
+        const scoreValElem = document.getElementById('scoreVal');
+        const comboValElem = document.getElementById('comboVal');
+        const livesValElem = document.getElementById('livesVal');
 
         let particles = [];
         let items = []; 
@@ -107,7 +145,16 @@
         let latestResults = null;
         let isRunning = false;
 
-        // إدارة الصوت بطريقة آمنة
+        function updateUI() {
+            scoreValElem.innerText = score;
+            if (combo >= 10) {
+                comboValElem.innerText = `🔥 x${combo} (FEVER)`;
+            } else {
+                comboValElem.innerText = `x${combo}`;
+            }
+            livesValElem.innerText = "❤️ ".repeat(Math.max(0, lives));
+        }
+
         let audioCtx = null;
         function initAudio() {
             try {
@@ -139,9 +186,7 @@
                 
                 osc.start();
                 osc.stop(audioCtx.currentTime + duration);
-            } catch (e) {
-                // تجاوز الأخطاء الصامتة
-            }
+            } catch (e) {}
         }
 
         function switchMonster() {
@@ -158,9 +203,9 @@
             lives = 3;
             isGameOver = false;
             statusBar.innerText = "بدأت اللعبة! حرك يدك الآن.";
+            updateUI();
         }
 
-        // توليد العناصر الهابطة بمعدل مستقر
         setInterval(() => {
             if (isRunning && canvasElement.width > 0 && !isGameOver) {
                 let isBomb = Math.random() < 0.25; 
@@ -227,12 +272,10 @@
             canvasCtx.restore();
         }
 
-        // معالجة النتائج الواردة من نموذج تتبع اليدين
         function onResults(results) {
             latestResults = results;
         }
 
-        // حلقة الرسم والتحديث الأساسية المعتمدة على محرك المتصفح للأداء العالي
         function gameLoop() {
             if (isRunning) {
                 updateAndRender(latestResults);
@@ -391,27 +434,7 @@
                 }
             }
 
-            canvasCtx.save();
-            canvasCtx.font = "bold 18px Arial";
-            canvasCtx.shadowBlur = 6;
-            canvasCtx.shadowColor = "#000";
-            
-            canvasCtx.fillStyle = "#00ffcc";
-            canvasCtx.fillText(`النقاط: ${score}`, 25, 35);
-            
-            if (combo >= 10) {
-                canvasCtx.fillStyle = "#ffee00";
-                canvasCtx.fillText(`🔥 FEVER MODE x${combo} 🔥`, 25, 65);
-            } else {
-                canvasCtx.fillStyle = "#ff007f";
-                canvasCtx.fillText(`الكومبو: x${combo}`, 25, 65);
-            }
-
-            let heartsText = "❤️ ".repeat(Math.max(0, lives));
-            canvasCtx.fillStyle = "#ff3333";
-            canvasCtx.fillText(`الأرواح: ${heartsText}`, 25, 95);
-
-            canvasCtx.restore();
+            updateUI();
             canvasCtx.restore();
         }
 
@@ -463,7 +486,6 @@
             }
         }
 
-        // بدء حلقة التشغيل الرئيسية للرسومات
         requestAnimationFrame(gameLoop);
     </script>
 </body>
