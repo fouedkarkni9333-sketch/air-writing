@@ -73,17 +73,17 @@
 </head>
 <body>
 
-    <h2>👾 حديقة الوحوش العازفة - Air Maestro</h2>
+    <h2>👾 حديقة الوحوش العازفة - وضع التحدي الحماسي</h2>
     <div class="video-container">
         <video id="webcam" autoplay playsinline></video>
         <canvas id="output_canvas"></canvas>
     </div>
 
-    <div class="status-bar" id="statusBar">حرك يدك لتوقظ الوحش وتجعله يعزف وتجنب القنابل!</div>
+    <div class="status-bar" id="statusBar">أسرع! التقط النوتات وتفادى القنابل الحارقة!</div>
 
     <div class="controls">
         <button class="btn-party" onclick="switchMonster()">تغيير نوع الوحش 🎭</button>
-        <button class="btn-reset" onclick="resetCanvas()">مسح الشاشة</button>
+        <button class="btn-reset" onclick="resetCanvas()">مسح / إعادة</button>
     </div>
 
     <script>
@@ -93,20 +93,20 @@
         const statusBar = document.getElementById('statusBar');
 
         let particles = [];
-        let items = []; // مصفوفة النوتات والقنابل الساقطة
+        let items = []; 
         let score = 0;
         let combo = 0;
         let lives = 3;
         let isGameOver = false;
-        let monsterType = 0; // تغيير شكل الوحش
-        let mouthOpen = false;
+        let monsterType = 0; 
         let isMoving = false;
         let lastMoveTime = Date.now();
+        let screenShake = 0; // تأثير هز الشاشة عند الانفجار أو الاصطدام
 
         // نظام إصدار أصوات موسيقية عبر Web Audio API
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
-        function playNote(freq, typeOverride, duration = 0.25, vol = 0.08) {
+        function playNote(freq, typeOverride, duration = 0.2, vol = 0.1) {
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
@@ -138,74 +138,72 @@
             combo = 0;
             lives = 3;
             isGameOver = false;
-            statusBar.innerText = "لعبة جديدة! حرك يدك لالتقاط النوتات.";
+            statusBar.innerText = "انتبه! بدأت اللعبة بسرعة أعلى!";
         }
 
-        // توليد عناصر هابطة (نوتات أو قنابل)
+        // توليد عناصر هابطة بحماس أسرع
         setInterval(() => {
             if (canvasElement.width > 0 && !isGameOver) {
-                let isBomb = Math.random() < 0.25; // نسبة ظهور القنابل 25%
+                let isBomb = Math.random() < 0.3; // نسبة القنابل 30% لتشويق أكثر
+                let speedMultiplier = 1 + (score / 200); // السرعة تزيد كلما زادت النقاط!
                 items.push({
                     x: Math.random() * (canvasElement.width - 60) + 30,
                     y: -30,
-                    speed: 2 + Math.random() * 2.5,
-                    radius: isBomb ? 20 : 16,
+                    speed: (3.5 + Math.random() * 3) * Math.min(speedMultiplier, 2.2),
+                    radius: isBomb ? 22 : 18,
                     isBomb: isBomb,
-                    color: isBomb ? '#111' : ['#ff007f', '#00ffcc', '#ffee00', '#ff5500'][Math.floor(Math.random() * 4)]
+                    color: isBomb ? '#ff2222' : ['#ff007f', '#00ffcc', '#ffee00', '#ff5500'][Math.floor(Math.random() * 4)]
                 });
             }
-        }, 1300);
+        }, 900); // تظهر العناصر بسرعة أكبر
 
         function drawMonster(x, y, isPlaying) {
             canvasCtx.save();
             canvasCtx.translate(x, y);
 
-            // حجم الوحش ولونه بناءً على نوعه (مع دعم Fever Mode)
             let baseColor = monsterType === 0 ? '#ff007f' : (monsterType === 1 ? '#00ffcc' : '#ffee00');
             if (combo >= 10) {
-                baseColor = `hsl(${Date.now() / 5 % 360}, 100%, 50%)`;
+                baseColor = `hsl(${Date.now() / 4 % 360}, 100%, 50%)`;
             }
             let eyeColor = '#ffffff';
 
-            // جسم الوحش (دائري أو بيضاوي مرن)
             canvasCtx.beginPath();
-            let radius = 45 + (isPlaying ? Math.sin(Date.now() / 50) * 5 : 0);
+            let radius = 48 + (isPlaying ? Math.sin(Date.now() / 30) * 7 : 0);
             canvasCtx.arc(0, 0, radius, 0, Math.PI * 2);
             canvasCtx.fillStyle = baseColor;
-            canvasCtx.shadowBlur = combo >= 10 ? 35 : 25;
+            canvasCtx.shadowBlur = combo >= 10 ? 40 : 25;
             canvasCtx.shadowColor = baseColor;
             canvasCtx.fill();
-            canvasCtx.lineWidth = 3;
+            canvasCtx.lineWidth = 4;
             canvasCtx.strokeStyle = '#fff';
             canvasCtx.stroke();
             canvasCtx.shadowBlur = 0;
 
-            // العيون المتحركة
+            // العيون الحماسية
             canvasCtx.beginPath();
-            canvasCtx.arc(-15, -10, 8, 0, Math.PI * 2);
-            canvasCtx.arc(15, -10, 8, 0, Math.PI * 2);
+            canvasCtx.arc(-15, -10, 9, 0, Math.PI * 2);
+            canvasCtx.arc(15, -10, 9, 0, Math.PI * 2);
             canvasCtx.fillStyle = eyeColor;
             canvasCtx.fill();
 
-            // بؤبؤ العين
             canvasCtx.beginPath();
-            canvasCtx.arc(-15, -10, 3, 0, Math.PI * 2);
-            canvasCtx.arc(15, -10, 3, 0, Math.PI * 2);
+            canvasCtx.arc(-15, -10, 4, 0, Math.PI * 2);
+            canvasCtx.arc(15, -10, 4, 0, Math.PI * 2);
             canvasCtx.fillStyle = '#000';
             canvasCtx.fill();
 
-            // الفم (يفتح ويغلق عند العزف)
+            // الفم المتحرك بحماس
             canvasCtx.beginPath();
             if (isPlaying) {
-                canvasCtx.arc(0, 15, 12, 0, Math.PI * 2); // فم مفتوح يصدر أصواتاً
+                canvasCtx.arc(0, 15, 15, 0, Math.PI * 2); 
                 canvasCtx.fillStyle = '#000';
                 canvasCtx.fill();
                 canvasCtx.strokeStyle = '#fff';
                 canvasCtx.stroke();
             } else {
-                canvasCtx.arc(0, 15, 10, 0, Math.PI); // فم نائم / مغلق
+                canvasCtx.arc(0, 15, 12, 0, Math.PI); 
                 canvasCtx.strokeStyle = '#000';
-                canvasCtx.lineWidth = 2;
+                canvasCtx.lineWidth = 3;
                 canvasCtx.stroke();
             }
 
@@ -217,25 +215,33 @@
             canvasElement.height = videoElement.videoHeight || 480;
 
             canvasCtx.save();
+
+            // تأثير هز الشاشة (Screen Shake) عند وقوع أضرار
+            if (screenShake > 0) {
+                let shakeX = (Math.random() - 0.5) * screenShake;
+                let shakeY = (Math.random() - 0.5) * screenShake;
+                canvasCtx.translate(shakeX, shakeY);
+                screenShake *= 0.9; // تراجع تدريجي للاهتزاز
+            }
+
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-            // تفعيل لون خلفية Fever Mode
+            // وميض وفوضى بصرية في Fever Mode
             if (combo >= 10) {
-                canvasCtx.fillStyle = `hsla(${Date.now() / 4 % 360}, 100%, 50%, 0.1)`;
+                canvasCtx.fillStyle = `hsla(${Date.now() / 3 % 360}, 100%, 50%, 0.18)`;
                 canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
             }
 
-            // شاشة انتهاء اللعبة
             if (isGameOver) {
-                canvasCtx.fillStyle = "rgba(0, 0, 0, 0.85)";
+                canvasCtx.fillStyle = "rgba(0, 0, 0, 0.9)";
                 canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
                 canvasCtx.fillStyle = "#ff007f";
-                canvasCtx.font = "bold 30px Arial";
+                canvasCtx.font = "bold 34px Arial";
                 canvasCtx.textAlign = "center";
-                canvasCtx.fillText("انتهت اللعبة! 💀", canvasElement.width / 2, canvasElement.height / 2 - 20);
+                canvasCtx.fillText("انتهت اللعبة! 💥", canvasElement.width / 2, canvasElement.height / 2 - 25);
                 canvasCtx.fillStyle = "#ffffff";
-                canvasCtx.font = "bold 18px Arial";
+                canvasCtx.font = "bold 20px Arial";
                 canvasCtx.fillText(`النتيجة النهائية: ${score}`, canvasElement.width / 2, canvasElement.height / 2 + 20);
                 canvasCtx.restore();
                 return;
@@ -247,8 +253,7 @@
 
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 const landmarks = results.multiHandLandmarks[0];
-                const indexFinger = landmarks[8]; // السبابة
-                // ضبط انعكاس المرآة ليتطابق مع مكان الإصبع بدقة
+                const indexFinger = landmarks[8]; 
                 monsterX = (1 - indexFinger.x) * canvasElement.width;
                 monsterY = indexFinger.y * canvasElement.height;
 
@@ -256,7 +261,7 @@
                 lastMoveTime = Date.now();
             }
 
-            // --- تحديث ورسم العناصر الهابطة (نوتات + قنابل) ---
+            // --- تحديث العناصر الحماسية وسقوطها ---
             for (let i = items.length - 1; i >= 0; i--) {
                 let item = items[i];
                 item.y += item.speed;
@@ -267,18 +272,18 @@
 
                 if (item.isBomb) {
                     canvasCtx.fillStyle = "#111";
-                    canvasCtx.shadowBlur = 10;
+                    canvasCtx.shadowBlur = 18;
                     canvasCtx.shadowColor = "#ff0000";
                     canvasCtx.fill();
-                    canvasCtx.lineWidth = 2;
-                    canvasCtx.strokeStyle = "#ff3333";
+                    canvasCtx.lineWidth = 3;
+                    canvasCtx.strokeStyle = "#ff0000";
                     canvasCtx.stroke();
-                    canvasCtx.fillStyle = "#ff0000";
-                    canvasCtx.font = "bold 12px Arial";
-                    canvasCtx.fillText("💣", item.x - 8, item.y + 4);
+                    canvasCtx.fillStyle = "#ff5555";
+                    canvasCtx.font = "bold 16px Arial";
+                    canvasCtx.fillText("💣", item.x - 10, item.y + 6);
                 } else {
                     canvasCtx.fillStyle = item.color;
-                    canvasCtx.shadowBlur = combo >= 10 ? 25 : 15;
+                    canvasCtx.shadowBlur = combo >= 10 ? 30 : 18;
                     canvasCtx.shadowColor = item.color;
                     canvasCtx.fill();
                     canvasCtx.lineWidth = 2;
@@ -287,59 +292,54 @@
                 }
                 canvasCtx.restore();
 
-                // فحص الاصطدام مع الوحش (الإصبع)
-                let dist = Math.hypot(monsterX - item.x, (monsterY - 50) - item.y);
-                if (dist < 45) {
+                let dist = Math.hypot(monsterX - item.x, (monsterY - 45) - item.y);
+                if (dist < 50) {
                     if (item.isBomb) {
-                        // اصطدام بقنبلة!
                         lives--;
                         combo = 0;
-                        playNote(75, 'sawtooth', 0.3, 0.15); // صوت نشاز حاد
-                        statusBar.innerText = "احذر! لقد لمست قنبلة!";
-                        if (lives <= 0) {
-                            isGameOver = true;
-                        }
+                        screenShake = 20; // اهتزاز قوي للشاشة عند الانفجار!
+                        playNode(60, 'sawtooth', 0.4, 0.2); 
+                        statusBar.innerText = "⚠️ احذر! انفجرت قنبلة وجهك!";
+                        if (lives <= 0) isGameOver = true;
                     } else {
-                        // التقاط نوتة موسيقية
                         let multiplier = combo >= 10 ? 2 : 1;
-                        score += (10 + (combo * 2)) * multiplier;
+                        score += (20 + (combo * 5)) * multiplier;
                         combo++;
 
-                        let freq = 150 + (canvasElement.height - item.y) * 2.5;
-                        playNote(freq);
+                        let freq = 200 + (combo * 35);
+                        playNode(freq, undefined, 0.15, 0.12);
 
-                        // توليد جزيئات طاقة نيون
-                        for (let p = 0; p < 6; p++) {
+                        // انفجار شرارات نيون كثيفة عند الالتقاط الناجح
+                        for (let p = 0; p < 12; p++) {
                             particles.push({
                                 x: item.x,
                                 y: item.y,
                                 radius: Math.random() * 8 + 3,
                                 color: item.color,
                                 alpha: 1,
-                                vx: (Math.random() - 0.5) * 8,
-                                vy: (Math.random() - 0.5) * 8
+                                vx: (Math.random() - 0.5) * 16,
+                                vy: (Math.random() - 0.5) * 16
                             });
                         }
                     }
                     items.splice(i, 1);
-                } else if (item.y > canvasElement.height + 20) {
+                } else if (item.y > canvasElement.height + 30) {
                     if (!item.isBomb && combo > 0) combo = 0;
                     items.splice(i, 1);
                 }
             }
 
-            // رسم الوحش يتبع الإصبع أو يظهر في المنتصف
             if (handActive) {
-                drawMonster(monsterX, monsterY - 50, true);
+                drawMonster(monsterX, monsterY - 45, true);
             } else {
                 if (Date.now() - lastMoveTime > 2000) {
                     drawMonster(canvasElement.width / 2, canvasElement.height / 2, false);
                 } else {
-                    drawMonster(monsterX, monsterY - 50, true);
+                    drawMonster(monsterX, monsterY - 45, true);
                 }
             }
 
-            // تحديث ورسم الجزيئات
+            // تحديث الشرارات
             for (let i = particles.length - 1; i >= 0; i--) {
                 let p = particles[i];
                 p.x += p.vx;
@@ -359,29 +359,28 @@
                 }
             }
 
-            // رسم النقاط، الكومبو، والأرواح على الشاشة
+            // واجهة اللعبة الحماسية
             canvasCtx.save();
-            canvasCtx.font = "bold 18px Arial";
-            canvasCtx.shadowBlur = 6;
+            canvasCtx.font = "bold 20px Arial";
+            canvasCtx.shadowBlur = 8;
             canvasCtx.shadowColor = "#000";
             
             canvasCtx.fillStyle = "#00ffcc";
-            canvasCtx.fillText(`النقاط: ${score}`, 25, 30);
+            canvasCtx.fillText(`النقاط: ${score}`, 25, 35);
             
             if (combo >= 10) {
                 canvasCtx.fillStyle = "#ffee00";
-                canvasCtx.fillText(`🔥 FEVER MODE x${combo} 🔥`, 25, 60);
+                canvasCtx.fillText(`🔥 FEVER MODE x${combo} 🔥`, 25, 70);
             } else {
                 canvasCtx.fillStyle = "#ff007f";
-                canvasCtx.fillText(`الكومبو: x${combo}`, 25, 60);
+                canvasCtx.fillText(`الكومبو: x${combo}`, 25, 70);
             }
 
             let heartsText = "❤️ ".repeat(lives);
             canvasCtx.fillStyle = "#ff3333";
-            canvasCtx.fillText(`الأرواح: ${heartsText}`, 25, 90);
+            canvasCtx.fillText(`الأرواح: ${heartsText}`, 25, 105);
 
             canvasCtx.restore();
-
             canvasCtx.restore();
         }
 
