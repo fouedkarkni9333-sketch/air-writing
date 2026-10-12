@@ -31,6 +31,7 @@
             box-shadow: 0 0 25px rgba(0, 255, 204, 0.4);
             background: #000;
             border: 2px solid #00ffcc;
+            transition: border-color 0.5s;
         }
         video, canvas {
             width: 100%;
@@ -56,7 +57,6 @@
             justify-content: center;
             width: 100%;
             max-width: 400px;
-            flex-wrap: nowrap;
         }
         button {
             flex: 1;
@@ -75,7 +75,6 @@
         .btn-party { background-color: #ff007f; color: white; }
         .btn-reset { background-color: #3f3f46; color: white; }
 
-        /* لوحة النتيجة والأرواح في الأسفل */
         .score-board {
             margin-top: 15px;
             width: 100%;
@@ -94,18 +93,20 @@
             display: flex;
             justify-content: space-around;
             align-items: center;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
         }
         .score-box { color: #00ffcc; }
         .combo-box { color: #ffee00; }
-        .lives-box { font-size: 20px; color: #ff3333; letter-spacing: 3px; }
+        .level-box { color: #ff55ff; }
+        .lives-box { font-size: 18px; color: #ff3333; letter-spacing: 2px; }
+        .power-box { color: #00ffff; font-size: 13px; }
     </style>
 </head>
 <body>
 
     <h2>👾 حديقة الوحوش العازفة - التحدي الحماسي</h2>
-    <div class="video-container">
+    <div class="video-container" id="videoContainer">
         <video id="webcam" autoplay playsinline muted></video>
         <canvas id="output_canvas"></canvas>
     </div>
@@ -118,14 +119,15 @@
         <button class="btn-reset" onclick="resetGame()">إعادة اللعبة</button>
     </div>
 
-    <!-- لوحة الأرواح والسكور أسفل الأزرار مباشرة -->
     <div class="score-board">
         <div class="score-row">
             <div class="score-box">النقاط: <span id="scoreText">0</span></div>
             <div class="combo-box">الكومبو: <span id="comboText">x0</span></div>
+            <div class="level-box">المستوى: <span id="levelText">1</span></div>
         </div>
         <div class="score-row">
             <div>الأرواح: <span id="livesText" class="lives-box">❤️❤️❤️</span></div>
+            <div class="power-box">الدرع: <span id="shieldText">❌</span> | الإبطاء: <span id="slowText">❌</span></div>
         </div>
     </div>
 
@@ -134,16 +136,24 @@
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
         const statusBar = document.getElementById('statusBar');
+        const videoContainer = document.getElementById('videoContainer');
 
         const scoreText = document.getElementById('scoreText');
         const comboText = document.getElementById('comboText');
+        const levelText = document.getElementById('levelText');
         const livesText = document.getElementById('livesText');
+        const shieldText = document.getElementById('shieldText');
+        const slowText = document.getElementById('slowText');
 
         let particles = [];
         let items = []; 
         let score = 0;
         let combo = 0;
         let lives = 3;
+        let level = 1;
+        let hasShield = false;
+        let isSlowMotion = false;
+        let slowTimer = null;
         let isGameOver = false;
         let monsterType = 0; 
         let lastMoveTime = Date.now();
@@ -155,7 +165,10 @@
         function updateUI() {
             scoreText.innerText = score;
             comboText.innerText = combo >= 10 ? `🔥 x${combo}` : `x${combo}`;
+            levelText.innerText = level;
             livesText.innerText = "❤️".repeat(Math.max(0, lives));
+            shieldText.innerText = hasShield ? "🛡️ مفعل" : "❌";
+            slowText.innerText = isSlowMotion ? "⏳ نشط" : "❌";
         }
 
         let audioCtx = null;
@@ -202,25 +215,46 @@
             score = 0;
             combo = 0;
             lives = 3;
+            level = 1;
+            hasShield = false;
+            isSlowMotion = false;
+            if (slowTimer) clearTimeout(slowTimer);
             isGameOver = false;
+            videoContainer.style.borderColor = "#00ffcc";
             statusBar.innerText = "بدأت اللعبة! حرك يدك الآن.";
             updateUI();
         }
 
+        // توليد العناصر مع إمكانية ظهور العناصر الخاصة (نجمة، درع، ساعة) وقنابل
         setInterval(() => {
             if (isRunning && canvasElement.width > 0 && !isGameOver) {
-                let isBomb = Math.random() < 0.25; 
-                let speedMultiplier = 1 + (score / 200); 
+                let rand = Math.random();
+                let type = 'normal';
+                let color = ['#ff007f', '#00ffcc', '#ffee00', '#ff5500'][Math.floor(Math.random() * 4)];
+                
+                if (rand < 0.22) {
+                    type = 'bomb'; // قنبلة
+                } else if (rand < 0.30) {
+                    type = 'star'; // نجمة مضاعفة النقاط ⭐
+                } else if (rand < 0.36) {
+                    type = 'shield'; // درع حماية 🛡️
+                } else if (rand < 0.42) {
+                    type = 'slow'; // إبطاء الزمن ⏳
+                }
+
+                let baseSpeed = 2.5 + (level * 0.4);
+                if (isSlowMotion) baseSpeed *= 0.5;
+
                 items.push({
                     x: Math.random() * (canvasElement.width - 60) + 30,
                     y: -30,
-                    speed: (2.5 + Math.random() * 2) * Math.min(speedMultiplier, 2.2),
-                    radius: isBomb ? 20 : 16,
-                    isBomb: isBomb,
-                    color: isBomb ? '#ff2222' : ['#ff007f', '#00ffcc', '#ffee00', '#ff5500'][Math.floor(Math.random() * 4)]
+                    speed: baseSpeed + Math.random() * 1.5,
+                    radius: type === 'bomb' ? 20 : 16,
+                    type: type,
+                    color: color
                 });
             }
-        }, 1100);
+        }, 1000);
 
         function drawMonster(x, y, isPlaying) {
             canvasCtx.save();
@@ -239,9 +273,18 @@
             canvasCtx.shadowColor = baseColor;
             canvasCtx.fill();
             canvasCtx.lineWidth = 3;
-            canvasCtx.strokeStyle = '#fff';
+            canvasCtx.strokeStyle = hasShield ? '#00ffff' : '#fff';
             canvasCtx.stroke();
             canvasCtx.shadowBlur = 0;
+
+            // رسم الدرع الخارجي لو كان مفعلًا
+            if (hasShield) {
+                canvasCtx.beginPath();
+                canvasCtx.arc(0, 0, radius + 8, 0, Math.PI * 2);
+                canvasCtx.strokeStyle = 'rgba(0, 255, 255, 0.7)';
+                canvasCtx.lineWidth = 3;
+                canvasCtx.stroke();
+            }
 
             canvasCtx.beginPath();
             canvasCtx.arc(-15, -10, 8, 0, Math.PI * 2);
@@ -290,6 +333,14 @@
             }
 
             if (canvasElement.width === 0 || canvasElement.height === 0) return;
+
+            // نظام المستويات (كل 100 نقطة يرتفع المستوى)
+            let newLevel = Math.floor(score / 100) + 1;
+            if (newLevel > level) {
+                level = newLevel;
+                statusBar.innerText = `🎉 مبروك! انتقلت إلى المستوى ${level}! تزايدت السرعة!`;
+                videoContainer.style.borderColor = `hsl(${level * 60}, 100%, 50%)`;
+            }
 
             canvasCtx.save();
 
@@ -348,7 +399,7 @@
                 canvasCtx.beginPath();
                 canvasCtx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
 
-                if (item.isBomb) {
+                if (item.type === 'bomb') {
                     canvasCtx.fillStyle = "#111";
                     canvasCtx.shadowBlur = 12;
                     canvasCtx.shadowColor = "#ff0000";
@@ -359,6 +410,27 @@
                     canvasCtx.fillStyle = "#ff5555";
                     canvasCtx.font = "bold 14px Arial";
                     canvasCtx.fillText("💣", item.x - 8, item.y + 5);
+                } else if (item.type === 'star') {
+                    canvasCtx.fillStyle = "#ffee00";
+                    canvasCtx.shadowBlur = 15;
+                    canvasCtx.shadowColor = "#ffee00";
+                    canvasCtx.fill();
+                    canvasCtx.font = "bold 16px Arial";
+                    canvasCtx.fillText("⭐", item.x - 8, item.y + 6);
+                } else if (item.type === 'shield') {
+                    canvasCtx.fillStyle = "#00ffff";
+                    canvasCtx.shadowBlur = 15;
+                    canvasCtx.shadowColor = "#00ffff";
+                    canvasCtx.fill();
+                    canvasCtx.font = "bold 16px Arial";
+                    canvasCtx.fillText("🛡️", item.x - 8, item.y + 6);
+                } else if (item.type === 'slow') {
+                    canvasCtx.fillStyle = "#aa00ff";
+                    canvasCtx.shadowBlur = 15;
+                    canvasCtx.shadowColor = "#aa00ff";
+                    canvasCtx.fill();
+                    canvasCtx.font = "bold 16px Arial";
+                    canvasCtx.fillText("⏳", item.x - 8, item.y + 6);
                 } else {
                     canvasCtx.fillStyle = item.color;
                     canvasCtx.shadowBlur = combo >= 10 ? 25 : 15;
@@ -372,13 +444,33 @@
 
                 let dist = Math.hypot(monsterX - item.x, (monsterY - 40) - item.y);
                 if (dist < 45) {
-                    if (item.isBomb) {
-                        lives--;
-                        combo = 0;
-                        screenShake = 15; 
-                        playNote(60, 'sawtooth', 0.25, 0.15); 
-                        statusBar.innerText = "⚠️ احذر! انفجرت قنبلة!";
-                        if (lives <= 0) isGameOver = true;
+                    if (item.type === 'bomb') {
+                        if (hasShield) {
+                            hasShield = false;
+                            statusBar.innerText = "🛡️ تم صد القنبلة بواسطة الدرع!";
+                            playNote(400, 'sine', 0.2, 0.1);
+                        } else {
+                            lives--;
+                            combo = 0;
+                            screenShake = 15; 
+                            playNote(60, 'sawtooth', 0.25, 0.15); 
+                            statusBar.innerText = "⚠️ احذر! انفجرت قنبلة!";
+                            if (lives <= 0) isGameOver = true;
+                        }
+                    } else if (item.type === 'star') {
+                        score += 50;
+                        playNote(500, 'triangle', 0.2, 0.1);
+                        statusBar.innerText = "⭐ نجمة حظ! +50 نقطة!";
+                    } else if (item.type === 'shield') {
+                        hasShield = true;
+                        playNote(450, 'sine', 0.2, 0.1);
+                        statusBar.innerText = "🛡️ حصلت على درع الحماية!";
+                    } else if (item.type === 'slow') {
+                        isSlowMotion = true;
+                        if (slowTimer) clearTimeout(slowTimer);
+                        slowTimer = setTimeout(() => { isSlowMotion = false; }, 5000);
+                        playNote(300, 'square', 0.2, 0.1);
+                        statusBar.innerText = "⏳ تم إبطاء الزمن لمدة 5 ثوانٍ!";
                     } else {
                         let multiplier = combo >= 10 ? 2 : 1;
                         score += (15 + (combo * 5)) * multiplier;
@@ -401,7 +493,7 @@
                     }
                     items.splice(i, 1);
                 } else if (item.y > canvasElement.height + 25) {
-                    if (!item.isBomb && combo > 0) combo = 0;
+                    if (item.type === 'normal' && combo > 0) combo = 0;
                     items.splice(i, 1);
                 }
             }
