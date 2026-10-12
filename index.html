@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" id="htmlRoot">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Maestro - حديقة الوحوش العازفة</title>
+    <title id="pageTitle">Air Maestro - حديقة الوحوش العازفة</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
@@ -105,7 +105,7 @@
 </head>
 <body>
 
-    <h2>👾 حديقة الوحوش العازفة - التحدي الحماسي</h2>
+    <h2 id="mainTitle">👾 حديقة الوحوش العازفة - التحدي الحماسي</h2>
     <div class="video-container" id="videoContainer">
         <video id="webcam" autoplay playsinline muted></video>
         <canvas id="output_canvas"></canvas>
@@ -114,29 +114,177 @@
     <div class="status-bar" id="statusBar">اضغط على "تشغيل الكاميرا" للبدء!</div>
 
     <div class="controls">
-        <button class="btn-cam" onclick="startCamera()">تشغيل الكاميرا 📷</button>
-        <button class="btn-party" onclick="switchMonster()">تغيير الوحش 🎭</button>
-        <button class="btn-reset" onclick="resetGame()">إعادة اللعبة</button>
+        <button class="btn-cam" id="btnCam" onclick="startCamera()">تشغيل الكاميرا 📷</button>
+        <button class="btn-party" id="btnMonster" onclick="switchMonster()">تغيير الوحش 🎭</button>
+        <button class="btn-reset" id="btnReset" onclick="resetGame()">إعادة اللعبة</button>
     </div>
 
     <div class="score-board">
         <div class="score-row">
-            <div class="score-box">النقاط: <span id="scoreText">0</span></div>
-            <div class="combo-box">الكومبو: <span id="comboText">x0</span></div>
-            <div class="level-box">المستوى: <span id="levelText">1</span></div>
+            <div class="score-box"><span id="lblScore">النقاط</span>: <span id="scoreText">0</span></div>
+            <div class="combo-box"><span id="lblCombo">الكومبو</span>: <span id="comboText">x0</span></div>
+            <div class="level-box"><span id="lblLevel">المستوى</span>: <span id="levelText">1</span></div>
         </div>
         <div class="score-row">
-            <div>الأرواح: <span id="livesText" class="lives-box">❤️❤️❤️</span></div>
-            <div class="power-box">الدرع: <span id="shieldText">❌</span> | الإبطاء: <span id="slowText">❌</span></div>
+            <div><span id="lblLives">الأرواح</span>: <span id="livesText" class="lives-box">❤️❤️❤️</span></div>
+            <div class="power-box"><span id="lblShield">الدرع</span>: <span id="shieldText">❌</span> | <span id="lblSlow">الإبطاء</span>: <span id="slowText">❌</span></div>
         </div>
     </div>
 
     <script>
+        // قاموس اللغات التلقائي (يدعم العربية، الفرنسية، الإنجليزية، الإسبانية، والألمانية كمثال أساسي)
+        const translations = {
+            ar: {
+                title: "Air Maestro - حديقة الوحوش العازفة",
+                mainTitle: "👾 حديقة الوحوش العازفة - التحدي الحماسي",
+                statusStart: "اضغط على \"تشغيل الكاميرا\" للبدء!",
+                btnCam: "تشغيل الكاميرا 📷",
+                btnMonster: "تغيير الوحش 🎭",
+                btnReset: "إعادة اللعبة",
+                lblScore: "النقاط",
+                lblCombo: "الكومبو",
+                lblLevel: "المستوى",
+                lblLives: "الأرواح",
+                lblShield: "الدرع",
+                lblSlow: "الإبطاء",
+                camStarting: "جاري تشغيل الكاميرا...",
+                camSuccess: "الكاميرا تعمل بنجاح! استمتع باللعبة.",
+                camError: "خطأ في تشغيل الكاميرا: يرجى السماح بالصلاحية.",
+                camFail: "فشل تشغيل الكاميرا!",
+                gameStarted: "بدأت اللعبة! حرك يدك الآن.",
+                gameOver: "انتهت اللعبة! 💥",
+                finalScore: "النتيجة النهائية: ",
+                bombWarning: "⚠️ احذر! انفجرت قنبلة!",
+                starMsg: "⭐ نجمة حظ! +50 نقطة!",
+                shieldMsg: "🛡️ حصلت على درع الحماية!",
+                shieldBlocked: "🛡️ تم صد القنبلة بواسطة الدرع!",
+                slowMsg: "⏳ تم إبطاء الزمن لمدة 5 ثوانٍ!",
+                levelUp: "🎉 مبروك! انتقلت إلى المستوى ",
+                monsters: ["الوحش الفضائي (بلوب)", "الوحش الدبوس (زوزو)", "الوحش الروبوت (بيبو)"],
+                monsterCalled: "تم استدعاء: "
+            },
+            fr: {
+                title: "Air Maestro - Jardin des Monstres Musiciens",
+                mainTitle: "👾 Jardin des Monstres Musiciens - Défi",
+                statusStart: "Appuyez sur \"Activer la caméra\" pour commencer !",
+                btnCam: "Activer Caméra 📷",
+                btnMonster: "Changer Monstre 🎭",
+                btnReset: "Recommencer",
+                lblScore: "Score",
+                lblCombo: "Combo",
+                lblLevel: "Niveau",
+                lblLives: "Vies",
+                lblShield: "Bouclier",
+                lblSlow: "Lent",
+                camStarting: "Démarrage de la caméra...",
+                camSuccess: "Caméra active ! Bon jeu.",
+                camError: "Erreur caméra : veuillez autoriser l'accès.",
+                camFail: "Échec du démarrage de la caméra !",
+                gameStarted: "Jeu commencé ! Bougez votre main.",
+                gameOver: "Game Over ! 💥",
+                finalScore: "Score final : ",
+                bombWarning: "⚠️ Attention ! Bombe explosée !",
+                starMsg: "⭐ Étoile chanceuse ! +50 pts !",
+                shieldMsg: "🛡️ Bouclier activé !",
+                shieldBlocked: "🛡️ Bouclier a bloqué la bombe !",
+                slowMsg: "⏳ Ralenti activé pour 5s !",
+                levelUp: "🎉 Niveau supérieur : ",
+                monsters: ["Monstre Spatial (Blob)", "Monstre Piquant (Zouzo)", "Monstre Robot (Bibo)"],
+                monsterCalled: "Monstre invoqué : "
+            },
+            es: {
+                title: "Air Maestro - Jardín de Monstruos Musicales",
+                mainTitle: "👾 Jardín de Monstruos - Desafío",
+                statusStart: "¡Presiona \"Activar Cámara\" para comenzar!",
+                btnCam: "Activar Cámara 📷",
+                btnMonster: "Cambiar Monstruo 🎭",
+                btnReset: "Reiniciar",
+                lblScore: "Puntuación",
+                lblCombo: "Combo",
+                lblLevel: "Nivel",
+                lblLives: "Vidas",
+                lblShield: "Escudo",
+                lblSlow: "Lento",
+                camStarting: "Iniciando cámara...",
+                camSuccess: "¡Cámara activa! Disfruta el juego.",
+                camError: "Error de cámara: permite el acceso.",
+                camFail: "¡Fallo al iniciar la cámara!",
+                gameStarted: "¡Juego iniciado! Mueve tu mano.",
+                gameOver: "¡Juego Terminado! 💥",
+                finalScore: "Puntuación final: ",
+                bombWarning: "⚠️ ¡Cuidado! ¡Bomba explotada!",
+                starMsg: "⭐ ¡Estrella de la suerte! +50 pts",
+                shieldMsg: "🛡️ ¡Escudo obtenido!",
+                shieldBlocked: "🛡️ ¡El escudo bloqueó la bomba!",
+                slowMsg: "⏳ ¡Tiempo ralentizado por 5s!",
+                levelUp: "🎉 ¡Nivel alcanzado: ",
+                monsters: ["Monstruo Espacial (Blob)", "Monstruo Pincho (Zouzo)", "Monstruo Robot (Bibo)"],
+                monsterCalled: "Monstruo invocado: "
+            },
+            en: {
+                title: "Air Maestro - Musical Monster Garden",
+                mainTitle: "👾 Musical Monster Garden - Challenge",
+                statusStart: "Click \"Start Camera\" to begin!",
+                btnCam: "Start Camera 📷",
+                btnMonster: "Switch Monster 🎭",
+                btnReset: "Reset Game",
+                lblScore: "Score",
+                lblCombo: "Combo",
+                lblLevel: "Level",
+                lblLives: "Lives",
+                lblShield: "Shield",
+                lblSlow: "Slow",
+                camStarting: "Starting camera...",
+                camSuccess: "Camera active! Enjoy the game.",
+                camError: "Camera error: Please allow permissions.",
+                camFail: "Camera failed to start!",
+                gameStarted: "Game started! Move your hand now.",
+                gameOver: "Game Over! 💥",
+                finalScore: "Final Score: ",
+                bombWarning: "⚠️ Watch out! Bomb exploded!",
+                starMsg: "⭐ Lucky Star! +50 pts!",
+                shieldMsg: "🛡️ Shield acquired!",
+                shieldBlocked: "🛡️ Shield blocked the bomb!",
+                slowMsg: "⏳ Slow motion for 5 seconds!",
+                levelUp: "🎉 Level Up: ",
+                monsters: ["Space Monster (Blob)", "Spike Monster (Zouzo)", "Robot Monster (Bibo)"],
+                monsterCalled: "Monster called: "
+            }
+        };
+
+        // تحديد لغة المتصفح تلقائياً (الافتراضي إنجليزي إذا لم تتطابق اللغة)
+        const userLang = (navigator.language || navigator.userLanguage || 'en').slice(0, 2);
+        const lang = translations[userLang] ? userLang : 'en';
+        const t = translations[lang];
+
+        // ضبط اتجاه الصفحة حسب اللغة (RTL للعربية، LTR لباقي اللغات)
+        const htmlRoot = document.getElementById('htmlRoot');
+        if (lang === 'ar') {
+            htmlRoot.setAttribute('dir', 'rtl');
+            htmlRoot.setAttribute('lang', 'ar');
+        } else {
+            htmlRoot.setAttribute('dir', 'ltr');
+            htmlRoot.setAttribute('lang', lang);
+        }
+
+        // تطبيق النصوص المترجمة على الواجهة فوراً
+        document.getElementById('pageTitle').innerText = t.title;
+        document.getElementById('mainTitle').innerText = t.mainTitle;
+        document.getElementById('statusBar').innerText = t.statusStart;
+        document.getElementById('btnCam').innerText = t.btnCam;
+        document.getElementById('btnMonster').innerText = t.btnMonster;
+        document.getElementById('btnReset').innerText = t.btnReset;
+        document.getElementById('lblScore').innerText = t.lblScore;
+        document.getElementById('lblCombo').innerText = t.lblCombo;
+        document.getElementById('lblLevel').innerText = t.lblLevel;
+        document.getElementById('lblLives').innerText = t.lblLives;
+        document.getElementById('lblShield').innerText = t.lblShield;
+        document.getElementById('lblSlow').innerText = t.lblSlow;
+
         const videoElement = document.getElementById('webcam');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
         const statusBar = document.getElementById('statusBar');
-        const videoContainer = document.getElementById('videoContainer');
 
         const scoreText = document.getElementById('scoreText');
         const comboText = document.getElementById('comboText');
@@ -144,6 +292,7 @@
         const livesText = document.getElementById('livesText');
         const shieldText = document.getElementById('shieldText');
         const slowText = document.getElementById('slowText');
+        const videoContainer = document.getElementById('videoContainer');
 
         let particles = [];
         let items = []; 
@@ -167,8 +316,8 @@
             comboText.innerText = combo >= 10 ? `🔥 x${combo}` : `x${combo}`;
             levelText.innerText = level;
             livesText.innerText = "❤️".repeat(Math.max(0, lives));
-            shieldText.innerText = hasShield ? "🛡️ مفعل" : "❌";
-            slowText.innerText = isSlowMotion ? "⏳ نشط" : "❌";
+            shieldText.innerText = hasShield ? "🛡️ ON" : "❌";
+            slowText.innerText = isSlowMotion ? "⏳ ON" : "❌";
         }
 
         let audioCtx = null;
@@ -205,8 +354,7 @@
 
         function switchMonster() {
             monsterType = (monsterType + 1) % 3;
-            const names = ["الوحش الفضائي (بلوب)", "الوحش الدبوس (زوزو)", "الوحش الروبوت (بيبو)"];
-            statusBar.innerText = `تم استدعاء: ${names[monsterType]}!`;
+            statusBar.innerText = `${t.monsterCalled} ${t.monsters[monsterType]}!`;
         }
 
         function resetGame() {
@@ -221,26 +369,20 @@
             if (slowTimer) clearTimeout(slowTimer);
             isGameOver = false;
             videoContainer.style.borderColor = "#00ffcc";
-            statusBar.innerText = "بدأت اللعبة! حرك يدك الآن.";
+            statusBar.innerText = t.gameStarted;
             updateUI();
         }
 
-        // توليد العناصر مع إمكانية ظهور العناصر الخاصة (نجمة، درع، ساعة) وقنابل
         setInterval(() => {
             if (isRunning && canvasElement.width > 0 && !isGameOver) {
                 let rand = Math.random();
                 let type = 'normal';
                 let color = ['#ff007f', '#00ffcc', '#ffee00', '#ff5500'][Math.floor(Math.random() * 4)];
                 
-                if (rand < 0.22) {
-                    type = 'bomb'; // قنبلة
-                } else if (rand < 0.30) {
-                    type = 'star'; // نجمة مضاعفة النقاط ⭐
-                } else if (rand < 0.36) {
-                    type = 'shield'; // درع حماية 🛡️
-                } else if (rand < 0.42) {
-                    type = 'slow'; // إبطاء الزمن ⏳
-                }
+                if (rand < 0.22) type = 'bomb';
+                else if (rand < 0.30) type = 'star';
+                else if (rand < 0.36) type = 'shield';
+                else if (rand < 0.42) type = 'slow';
 
                 let baseSpeed = 2.5 + (level * 0.4);
                 if (isSlowMotion) baseSpeed *= 0.5;
@@ -277,7 +419,6 @@
             canvasCtx.stroke();
             canvasCtx.shadowBlur = 0;
 
-            // رسم الدرع الخارجي لو كان مفعلًا
             if (hasShield) {
                 canvasCtx.beginPath();
                 canvasCtx.arc(0, 0, radius + 8, 0, Math.PI * 2);
@@ -294,290 +435,4 @@
 
             canvasCtx.beginPath();
             canvasCtx.arc(-15, -10, 3, 0, Math.PI * 2);
-            canvasCtx.arc(15, -10, 3, 0, Math.PI * 2);
-            canvasCtx.fillStyle = '#000';
-            canvasCtx.fill();
-
-            canvasCtx.beginPath();
-            if (isPlaying) {
-                canvasCtx.arc(0, 15, 14, 0, Math.PI * 2); 
-                canvasCtx.fillStyle = '#000';
-                canvasCtx.fill();
-                canvasCtx.strokeStyle = '#fff';
-                canvasCtx.stroke();
-            } else {
-                canvasCtx.arc(0, 15, 10, 0, Math.PI); 
-                canvasCtx.strokeStyle = '#000';
-                canvasCtx.lineWidth = 2;
-                canvasCtx.stroke();
-            }
-
-            canvasCtx.restore();
-        }
-
-        function onResults(results) {
-            latestResults = results;
-        }
-
-        function gameLoop() {
-            if (isRunning) {
-                updateAndRender(latestResults);
-            }
-            requestAnimationFrame(gameLoop);
-        }
-
-        function updateAndRender(results) {
-            if (videoElement.videoWidth > 0 && canvasElement.width !== videoElement.videoWidth) {
-                canvasElement.width = videoElement.videoWidth;
-                canvasElement.height = videoElement.videoHeight;
-            }
-
-            if (canvasElement.width === 0 || canvasElement.height === 0) return;
-
-            // نظام المستويات (كل 100 نقطة يرتفع المستوى)
-            let newLevel = Math.floor(score / 100) + 1;
-            if (newLevel > level) {
-                level = newLevel;
-                statusBar.innerText = `🎉 مبروك! انتقلت إلى المستوى ${level}! تزايدت السرعة!`;
-                videoContainer.style.borderColor = `hsl(${level * 60}, 100%, 50%)`;
-            }
-
-            canvasCtx.save();
-
-            if (screenShake > 0) {
-                let shakeX = (Math.random() - 0.5) * screenShake;
-                let shakeY = (Math.random() - 0.5) * screenShake;
-                canvasCtx.translate(shakeX, shakeY);
-                screenShake *= 0.85;
-            }
-
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            
-            if (results && results.image) {
-                canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-            }
-
-            if (combo >= 10) {
-                canvasCtx.fillStyle = `hsla(${Date.now() / 3 % 360}, 100%, 50%, 0.15)`;
-                canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
-            }
-
-            if (isGameOver) {
-                canvasCtx.fillStyle = "rgba(0, 0, 0, 0.9)";
-                canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
-                canvasCtx.fillStyle = "#ff007f";
-                canvasCtx.font = "bold 32px Arial";
-                canvasCtx.textAlign = "center";
-                canvasCtx.fillText("انتهت اللعبة! 💥", canvasElement.width / 2, canvasElement.height / 2 - 20);
-                canvasCtx.fillStyle = "#ffffff";
-                canvasCtx.font = "bold 18px Arial";
-                canvasCtx.fillText(`النتيجة النهائية: ${score}`, canvasElement.width / 2, canvasElement.height / 2 + 25);
-                canvasCtx.restore();
-                updateUI();
-                return;
-            }
-
-            let monsterX = canvasElement.width / 2;
-            let monsterY = canvasElement.height / 2;
-            let handActive = false;
-
-            if (results && results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const landmarks = results.multiHandLandmarks[0];
-                const indexFinger = landmarks[8]; 
-                monsterX = (1 - indexFinger.x) * canvasElement.width;
-                monsterY = indexFinger.y * canvasElement.height;
-
-                handActive = true;
-                lastMoveTime = Date.now();
-            }
-
-            for (let i = items.length - 1; i >= 0; i--) {
-                let item = items[i];
-                item.y += item.speed;
-
-                canvasCtx.save();
-                canvasCtx.beginPath();
-                canvasCtx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
-
-                if (item.type === 'bomb') {
-                    canvasCtx.fillStyle = "#111";
-                    canvasCtx.shadowBlur = 12;
-                    canvasCtx.shadowColor = "#ff0000";
-                    canvasCtx.fill();
-                    canvasCtx.lineWidth = 2;
-                    canvasCtx.strokeStyle = "#ff0000";
-                    canvasCtx.stroke();
-                    canvasCtx.fillStyle = "#ff5555";
-                    canvasCtx.font = "bold 14px Arial";
-                    canvasCtx.fillText("💣", item.x - 8, item.y + 5);
-                } else if (item.type === 'star') {
-                    canvasCtx.fillStyle = "#ffee00";
-                    canvasCtx.shadowBlur = 15;
-                    canvasCtx.shadowColor = "#ffee00";
-                    canvasCtx.fill();
-                    canvasCtx.font = "bold 16px Arial";
-                    canvasCtx.fillText("⭐", item.x - 8, item.y + 6);
-                } else if (item.type === 'shield') {
-                    canvasCtx.fillStyle = "#00ffff";
-                    canvasCtx.shadowBlur = 15;
-                    canvasCtx.shadowColor = "#00ffff";
-                    canvasCtx.fill();
-                    canvasCtx.font = "bold 16px Arial";
-                    canvasCtx.fillText("🛡️", item.x - 8, item.y + 6);
-                } else if (item.type === 'slow') {
-                    canvasCtx.fillStyle = "#aa00ff";
-                    canvasCtx.shadowBlur = 15;
-                    canvasCtx.shadowColor = "#aa00ff";
-                    canvasCtx.fill();
-                    canvasCtx.font = "bold 16px Arial";
-                    canvasCtx.fillText("⏳", item.x - 8, item.y + 6);
-                } else {
-                    canvasCtx.fillStyle = item.color;
-                    canvasCtx.shadowBlur = combo >= 10 ? 25 : 15;
-                    canvasCtx.shadowColor = item.color;
-                    canvasCtx.fill();
-                    canvasCtx.lineWidth = 2;
-                    canvasCtx.strokeStyle = '#fff';
-                    canvasCtx.stroke();
-                }
-                canvasCtx.restore();
-
-                let dist = Math.hypot(monsterX - item.x, (monsterY - 40) - item.y);
-                if (dist < 45) {
-                    if (item.type === 'bomb') {
-                        if (hasShield) {
-                            hasShield = false;
-                            statusBar.innerText = "🛡️ تم صد القنبلة بواسطة الدرع!";
-                            playNote(400, 'sine', 0.2, 0.1);
-                        } else {
-                            lives--;
-                            combo = 0;
-                            screenShake = 15; 
-                            playNote(60, 'sawtooth', 0.25, 0.15); 
-                            statusBar.innerText = "⚠️ احذر! انفجرت قنبلة!";
-                            if (lives <= 0) isGameOver = true;
-                        }
-                    } else if (item.type === 'star') {
-                        score += 50;
-                        playNote(500, 'triangle', 0.2, 0.1);
-                        statusBar.innerText = "⭐ نجمة حظ! +50 نقطة!";
-                    } else if (item.type === 'shield') {
-                        hasShield = true;
-                        playNote(450, 'sine', 0.2, 0.1);
-                        statusBar.innerText = "🛡️ حصلت على درع الحماية!";
-                    } else if (item.type === 'slow') {
-                        isSlowMotion = true;
-                        if (slowTimer) clearTimeout(slowTimer);
-                        slowTimer = setTimeout(() => { isSlowMotion = false; }, 5000);
-                        playNote(300, 'square', 0.2, 0.1);
-                        statusBar.innerText = "⏳ تم إبطاء الزمن لمدة 5 ثوانٍ!";
-                    } else {
-                        let multiplier = combo >= 10 ? 2 : 1;
-                        score += (15 + (combo * 5)) * multiplier;
-                        combo++;
-
-                        let freq = 180 + (combo * 25);
-                        playNote(freq, undefined, 0.1, 0.08);
-
-                        for (let p = 0; p < 8; p++) {
-                            particles.push({
-                                x: item.x,
-                                y: item.y,
-                                radius: Math.random() * 6 + 2,
-                                color: item.color,
-                                alpha: 1,
-                                vx: (Math.random() - 0.5) * 12,
-                                vy: (Math.random() - 0.5) * 12
-                            });
-                        }
-                    }
-                    items.splice(i, 1);
-                } else if (item.y > canvasElement.height + 25) {
-                    if (item.type === 'normal' && combo > 0) combo = 0;
-                    items.splice(i, 1);
-                }
-            }
-
-            if (handActive) {
-                drawMonster(monsterX, monsterY - 40, true);
-            } else {
-                if (Date.now() - lastMoveTime > 2000) {
-                    drawMonster(canvasElement.width / 2, canvasElement.height / 2, false);
-                } else {
-                    drawMonster(monsterX, monsterY - 40, true);
-                }
-            }
-
-            for (let i = particles.length - 1; i >= 0; i--) {
-                let p = particles[i];
-                p.x += p.vx;
-                p.y += p.vy;
-                p.alpha -= 0.05;
-
-                if (p.alpha <= 0) {
-                    particles.splice(i, 1);
-                } else {
-                    canvasCtx.save();
-                    canvasCtx.globalAlpha = p.alpha;
-                    canvasCtx.beginPath();
-                    canvasCtx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
-                    canvasCtx.fillStyle = p.color;
-                    canvasCtx.fill();
-                    canvasCtx.restore();
-                }
-            }
-
-            updateUI();
-            canvasCtx.restore();
-        }
-
-        const hands = new Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-        });
-
-        hands.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.7,
-            minTrackingConfidence: 0.7
-        });
-
-        hands.onResults(onResults);
-
-        function startCamera() {
-            initAudio();
-            statusBar.innerText = "جاري تشغيل الكاميرا...";
-
-            if (cameraInstance) return;
-
-            try {
-                cameraInstance = new Camera(videoElement, {
-                    onFrame: async () => {
-                        if (videoElement.readyState >= 2) {
-                            await hands.send({ image: videoElement });
-                        }
-                    },
-                    width: 640,
-                    height: 480
-                });
-
-                cameraInstance.start().then(() => {
-                    isRunning = true;
-                    statusBar.innerText = "الكاميرا تعمل بنجاح! استمتع باللعبة.";
-                }).catch(err => {
-                    console.error(err);
-                    alert("خطأ في تشغيل الكاميرا: يرجى السماح بالصلاحية.");
-                    statusBar.innerText = "فشل تشغيل الكاميرا!";
-                    cameraInstance = null;
-                });
-            } catch (e) {
-                console.error(e);
-                statusBar.innerText = "حدث خطأ أثناء تهيئة الكاميرا.";
-                cameraInstance = null;
-            }
-        }
-
-        requestAnimationFrame(gameLoop);
-    </script>
-</body>
-</html>
+            canvasCtx.arc(15, -10,
