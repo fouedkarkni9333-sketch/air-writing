@@ -105,7 +105,6 @@
         let screenShake = 0;
         let cameraInstance = null;
 
-        // تهيئة آمنة لمدير الصوت لمنع التجمّد
         let audioCtx = null;
         function initAudio() {
             if (!audioCtx) {
@@ -134,7 +133,7 @@
                 osc.start();
                 osc.stop(audioCtx.currentTime + duration);
             } catch (e) {
-                // تجاهل أخطاء الصوت في حال منعها المتصفح لمنع توقف اللعبة
+                // تجاهل الأخطاء
             }
         }
 
@@ -154,7 +153,6 @@
             statusBar.innerText = "بدأت اللعبة! حرك يدك الآن.";
         }
 
-        // توليد عناصر هابطة تتسارع تدريجياً
         setInterval(() => {
             if (canvasElement.width > 0 && !isGameOver) {
                 let isBomb = Math.random() < 0.25; 
@@ -407,8 +405,12 @@
         hands.onResults(onResults);
 
         function startCamera() {
-            initAudio(); // تفعيل الصوت عند الضغط
+            initAudio();
             statusBar.innerText = "جاري تشغيل الكاميرا...";
+            
+            // التأكد من عدم إنشاء أكثر من كائن كاميرا في نفس الوقت
+            if (cameraInstance) return;
+
             cameraInstance = new Camera(videoElement, {
                 onFrame: async () => {
                     await hands.send({ image: videoElement });
@@ -422,6 +424,7 @@
             }).catch(err => {
                 alert("خطأ في تشغيل الكاميرا: يرجى السماح بالصلاحية.");
                 statusBar.innerText = "فشل تشغيل الكاميرا!";
+                cameraInstance = null;
             });
         }
     </script>
