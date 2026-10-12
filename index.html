@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Air Maestro - حديقة الوحوش العازفة</title>
-    <!-- مكتبات MediaPipe للبراوزر -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
@@ -36,7 +35,7 @@
             width: 100%;
             height: auto;
             display: block;
-            transform: scaleX(-1); /* مرآة */
+            transform: scaleX(-1);
         }
         canvas {
             position: absolute;
@@ -49,6 +48,7 @@
             gap: 10px;
             justify-content: center;
             max-width: 400px;
+            flex-wrap: wrap;
         }
         button {
             padding: 10px 16px;
@@ -61,6 +61,7 @@
             transition: transform 0.1s;
         }
         button:active { transform: scale(0.95); }
+        .btn-cam { background-color: #00ffcc; color: #000; }
         .btn-party { background-color: #ff007f; color: white; }
         .btn-reset { background-color: #3f3f46; color: white; }
         .status-bar {
@@ -73,17 +74,18 @@
 </head>
 <body>
 
-    <h2>👾 حديقة الوحوش العازفة - وضع التحدي الحماسي</h2>
+    <h2>👾 حديقة الوحوش العازفة - التحدي الحماسي</h2>
     <div class="video-container">
-        <video id="webcam" autoplay playsinline></video>
+        <video id="webcam" autoplay playsinline muted></video>
         <canvas id="output_canvas"></canvas>
     </div>
 
-    <div class="status-bar" id="statusBar">أسرع! التقط النوتات وتفادى القنابل الحارقة!</div>
+    <div class="status-bar" id="statusBar">اضغط على "تشغيل الكاميرا" للبدء!</div>
 
     <div class="controls">
-        <button class="btn-party" onclick="switchMonster()">تغيير نوع الوحش 🎭</button>
-        <button class="btn-reset" onclick="resetCanvas()">مسح / إعادة</button>
+        <button class="btn-cam" onclick="startCamera()">تشغيل الكاميرا 📷</button>
+        <button class="btn-party" onclick="switchMonster()">تغيير الوحش 🎭</button>
+        <button class="btn-reset" onclick="resetGame()">إعادة اللعبة</button>
     </div>
 
     <script>
@@ -99,11 +101,10 @@
         let lives = 3;
         let isGameOver = false;
         let monsterType = 0; 
-        let isMoving = false;
         let lastMoveTime = Date.now();
-        let screenShake = 0; // تأثير هز الشاشة عند الانفجار أو الاصطدام
+        let screenShake = 0;
+        let cameraInstance = null;
 
-        // نظام إصدار أصوات موسيقية عبر Web Audio API
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
         function playNote(freq, typeOverride, duration = 0.2, vol = 0.1) {
@@ -131,31 +132,31 @@
             statusBar.innerText = `تم استدعاء: ${names[monsterType]}!`;
         }
 
-        function resetCanvas() {
+        function resetGame() {
             particles = [];
             items = [];
             score = 0;
             combo = 0;
             lives = 3;
             isGameOver = false;
-            statusBar.innerText = "انتبه! بدأت اللعبة بسرعة أعلى!";
+            statusBar.innerText = "بدأت اللعبة! حرك يدك الآن.";
         }
 
-        // توليد عناصر هابطة بحماس أسرع
+        // توليد عناصر هابطة تتسارع تدريجياً مع زيادة النقاط
         setInterval(() => {
             if (canvasElement.width > 0 && !isGameOver) {
-                let isBomb = Math.random() < 0.3; // نسبة القنابل 30% لتشويق أكثر
-                let speedMultiplier = 1 + (score / 200); // السرعة تزيد كلما زادت النقاط!
+                let isBomb = Math.random() < 0.3; 
+                let speedMultiplier = 1 + (score / 150); // السرعة تزداد تدريجياً كلما ربحت نقاطاً أكثر!
                 items.push({
                     x: Math.random() * (canvasElement.width - 60) + 30,
                     y: -30,
-                    speed: (3.5 + Math.random() * 3) * Math.min(speedMultiplier, 2.2),
+                    speed: (3 + Math.random() * 2.5) * Math.min(speedMultiplier, 2.5),
                     radius: isBomb ? 22 : 18,
                     isBomb: isBomb,
                     color: isBomb ? '#ff2222' : ['#ff007f', '#00ffcc', '#ffee00', '#ff5500'][Math.floor(Math.random() * 4)]
                 });
             }
-        }, 900); // تظهر العناصر بسرعة أكبر
+        }, 1000);
 
         function drawMonster(x, y, isPlaying) {
             canvasCtx.save();
@@ -179,7 +180,6 @@
             canvasCtx.stroke();
             canvasCtx.shadowBlur = 0;
 
-            // العيون الحماسية
             canvasCtx.beginPath();
             canvasCtx.arc(-15, -10, 9, 0, Math.PI * 2);
             canvasCtx.arc(15, -10, 9, 0, Math.PI * 2);
@@ -192,7 +192,6 @@
             canvasCtx.fillStyle = '#000';
             canvasCtx.fill();
 
-            // الفم المتحرك بحماس
             canvasCtx.beginPath();
             if (isPlaying) {
                 canvasCtx.arc(0, 15, 15, 0, Math.PI * 2); 
@@ -211,23 +210,25 @@
         }
 
         function onResults(results) {
-            canvasElement.width = videoElement.videoWidth || 640;
-            canvasElement.height = videoElement.videoHeight || 480;
+            if (videoElement.videoWidth > 0 && canvasElement.width !== videoElement.videoWidth) {
+                canvasElement.width = videoElement.videoWidth;
+                canvasElement.height = videoElement.videoHeight;
+            }
+
+            if (canvasElement.width === 0) return;
 
             canvasCtx.save();
 
-            // تأثير هز الشاشة (Screen Shake) عند وقوع أضرار
             if (screenShake > 0) {
                 let shakeX = (Math.random() - 0.5) * screenShake;
                 let shakeY = (Math.random() - 0.5) * screenShake;
                 canvasCtx.translate(shakeX, shakeY);
-                screenShake *= 0.9; // تراجع تدريجي للاهتزاز
+                screenShake *= 0.9;
             }
 
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-            // وميض وفوضى بصرية في Fever Mode
             if (combo >= 10) {
                 canvasCtx.fillStyle = `hsla(${Date.now() / 3 % 360}, 100%, 50%, 0.18)`;
                 canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
@@ -261,7 +262,6 @@
                 lastMoveTime = Date.now();
             }
 
-            // --- تحديث العناصر الحماسية وسقوطها ---
             for (let i = items.length - 1; i >= 0; i--) {
                 let item = items[i];
                 item.y += item.speed;
@@ -297,9 +297,9 @@
                     if (item.isBomb) {
                         lives--;
                         combo = 0;
-                        screenShake = 20; // اهتزاز قوي للشاشة عند الانفجار!
+                        screenShake = 20; 
                         playNode(60, 'sawtooth', 0.4, 0.2); 
-                        statusBar.innerText = "⚠️ احذر! انفجرت قنبلة وجهك!";
+                        statusBar.innerText = "⚠️ احذر! انفجرت قنبلة!";
                         if (lives <= 0) isGameOver = true;
                     } else {
                         let multiplier = combo >= 10 ? 2 : 1;
@@ -309,7 +309,6 @@
                         let freq = 200 + (combo * 35);
                         playNode(freq, undefined, 0.15, 0.12);
 
-                        // انفجار شرارات نيون كثيفة عند الالتقاط الناجح
                         for (let p = 0; p < 12; p++) {
                             particles.push({
                                 x: item.x,
@@ -339,7 +338,6 @@
                 }
             }
 
-            // تحديث الشرارات
             for (let i = particles.length - 1; i >= 0; i--) {
                 let p = particles[i];
                 p.x += p.vx;
@@ -359,7 +357,7 @@
                 }
             }
 
-            // واجهة اللعبة الحماسية
+            // رسم النقاط، الكومبو، والقلوب بوضوح تام على الشاشة
             canvasCtx.save();
             canvasCtx.font = "bold 20px Arial";
             canvasCtx.shadowBlur = 8;
@@ -397,17 +395,23 @@
 
         hands.onResults(onResults);
 
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await hands.send({ image: videoElement });
-            },
-            width: 640,
-            height: 480
-        });
+        function startCamera() {
+            statusBar.innerText = "جاري تشغيل الكاميرا...";
+            cameraInstance = new Camera(videoElement, {
+                onFrame: async () => {
+                    await hands.send({ image: videoElement });
+                },
+                width: 640,
+                height: 480
+            });
 
-        camera.start().catch(err => {
-            alert("خطأ في تشغيل الكاميرا: " + err);
-        });
+            cameraInstance.start().then(() => {
+                statusBar.innerText = "الكاميرا تعمل! حرك يدك الآن.";
+            }).catch(err => {
+                alert("خطأ في الكاميرا: يرجى السماح بالصلاحية.");
+                statusBar.innerText = "فشل تشغيل الكاميرا!";
+            });
+        }
     </script>
 </body>
 </html>
